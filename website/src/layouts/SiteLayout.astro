@@ -1,0 +1,61 @@
+---
+import '../styles/global.css';
+import { pageURL, repositoryURL, supportEmail } from '../lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  section?: 'home' | 'support' | 'privacy';
+}
+const {
+  title = 'Omnibar for Safari — A little room to browse',
+  description = 'A free, native address and search popover for Safari on Mac. Keep your tabs in the sidebar, see the full URL, and search your way.',
+  section = 'home',
+} = Astro.props;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
+const favicon = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.svg`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f5f5ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#181e1b" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Omnibar for Safari" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical.href} />}
+    {canonical && <link rel="canonical" href={canonical.href} />}
+    <link rel="icon" href={favicon} type="image/svg+xml" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header wrap">
+      <a class="wordmark" href={pageURL()} aria-label="Omnibar home">
+        <svg class="brand-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="11" fill="currentColor"/><rect x="9" y="14" width="22" height="12" rx="5" fill="none" stroke="var(--paper)" stroke-width="2"/><path d="M13 20h10m-3-3 3 3-3 3" fill="none" stroke="var(--paper)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Omnibar<span class="wordmark-suffix"> for Safari</span></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href={pageURL('support')} aria-current={section === 'support' ? 'page' : undefined}>Support</a>
+        <a href={pageURL('privacy')} aria-current={section === 'privacy' ? 'page' : undefined}>Privacy</a>
+        {repositoryURL && <a class="source-link" href={repositoryURL}>Source <span aria-hidden="true">↗</span></a>}
+      </nav>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer wrap">
+      <div><a class="footer-brand" href={pageURL()}>Omnibar</a><p>A small Mac utility. Free and open source.</p></div>
+      <div class="footer-links">
+        <a href={pageURL('support')}>Support</a>
+        <a href={pageURL('privacy')}>Privacy policy</a>
+        <a href={repositoryURL ? `${repositoryURL}/blob/main/LICENSE` : `${pageURL('support')}#source`}>BSD 2-Clause license</a>
+        <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+      </div>
+      <p class="footer-note">Safari and macOS are trademarks of Apple Inc. Omnibar is an independent project.</p>
+    </footer>
+  </body>
+</html>

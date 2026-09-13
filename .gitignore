@@ -1,0 +1,16 @@
+node_modules/
+build/
+test-results/
+playwright-report/
+.DS_Store
+xcuserdata/
+*.xcuserstate
+website/dist/
+website/.astro/
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile

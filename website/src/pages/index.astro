@@ -1,0 +1,51 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import BrowserIllustration from '../components/BrowserIllustration.astro';
+import { appStoreURL, engines, pageURL, repositoryURL } from '../lib/site';
+---
+<SiteLayout>
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow"><span></span> A small native Safari extension</p>
+      <h1>A little room<br />to <em>browse.</em></h1>
+      <p class="hero-description">Keep your tabs in the sidebar. Omnibar puts the full address and a simple search field one click away, in a native Mac popover.</p>
+      <div class="hero-actions">
+        <a class="button" href={appStoreURL || `${pageURL('support')}#setup`}>{appStoreURL ? 'Get Omnibar on the App Store' : 'Set up Omnibar'} <span aria-hidden="true">↗</span></a>
+        {repositoryURL && <a class="quiet-link" href={repositoryURL}>View the source <span aria-hidden="true">↗</span></a>}
+      </div>
+      <p class="compatibility">Free & open source <span>·</span> macOS 13 or later</p>
+    </div>
+    <BrowserIllustration />
+  </section>
+
+  <section class="intro-band wrap" aria-label="How it works">
+    <p>A familiar field.<br /><strong>Exactly when you need it.</strong></p>
+    <div class="shortcut"><kbd>↵</kbd><span>Go to an address<br />or run a search</span></div>
+    <div class="shortcut"><kbd>⌘</kbd><kbd>↵</kbd><span>Open your destination<br />in a new tab</span></div>
+    <div class="shortcut"><kbd>esc</kbd><span>Close the popover<br />and keep browsing</span></div>
+  </section>
+
+  <section class="feature-section wrap">
+    <div class="section-heading"><p class="eyebrow">Made for your Mac</p><h2>Small by design.<br />Useful by habit.</h2></div>
+    <div class="feature-list">
+      <article><span class="feature-number">01</span><div><h3>Your address, in full.</h3><p>Click the toolbar button to see and select the current URL. Paste a new address, edit what’s there, or type a search. Your usual Mac text-editing shortcuts work as expected.</p></div></article>
+      <article><span class="feature-number">02</span><div><h3>A good fit for Compact mode.</h3><p>Keep Safari’s tab sidebar and a quieter top bar. Omnibar opens as a toolbar popover, leaving the webpage and Safari’s own address bar alone.</p></div></article>
+      <article><span class="feature-number">03</span><div><h3>Your preferences stay close.</h3><p>Engine settings live on your Mac. Omnibar has no analytics, suggestions service, or browsing-history database. Search text goes to your chosen provider when you submit it.</p><a class="text-link" href={pageURL('privacy')}>Read the privacy policy <span aria-hidden="true">→</span></a></div></article>
+    </div>
+  </section>
+
+  <section class="search-section wrap">
+    <div class="search-heading"><p class="eyebrow">Search your way</p><h2>Your first choice.<br />And all the others.</h2><p>Seventeen built-in engines, plus your own. Drag to reorder the list; the first engine becomes your default. The menu lets you choose another for a single search.</p></div>
+    <ul class="engine-list" aria-label="Built-in search engines">{engines.map((engine) => <li>{engine}</li>)}</ul>
+    <div class="search-details">
+      <div><h3>A sensible start for your region.</h3><p>Your Mac’s Region setting sets the initial order, with choices such as Naver in South Korea, Baidu in China, and Seznam in Czechia. Your saved order stays yours.</p></div>
+      <div><h3>Add the search you use.</h3><p>Give a custom engine a name and a search URL with <code>%s</code> or <code>{'{searchTerms}'}</code>. Omnibar takes care of encoding your query.</p></div>
+      <div><h3>Kagi, including private windows.</h3><p>Optionally save your Kagi private session link in the local macOS Keychain. Omnibar uses it for Kagi searches when Safari confirms Private Browsing.</p></div>
+    </div>
+  </section>
+
+  <section class="closing wrap">
+    <div><p class="eyebrow">No account. No subscription.</p><h2>Just a useful little thing.</h2><p>Free to use, open to inspect, and made to feel at home on your Mac.</p></div>
+    <a class="button secondary" href={appStoreURL || `${pageURL('support')}#setup`}>{appStoreURL ? 'Get Omnibar' : 'Get started'} <span aria-hidden="true">→</span></a>
+  </section>
+</SiteLayout>

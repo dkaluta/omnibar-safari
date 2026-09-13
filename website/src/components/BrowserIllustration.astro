@@ -1,0 +1,48 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const assetBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+const screenshotPath = resolve(process.cwd(), 'public/images/safari-omnibar.png');
+const screenshot = existsSync(screenshotPath) ? readFileSync(screenshotPath) : undefined;
+const screenshotSize = screenshot && screenshot.length >= 24 && screenshot.toString('ascii', 1, 4) === 'PNG'
+  ? { width: screenshot.readUInt32BE(16), height: screenshot.readUInt32BE(20) }
+  : undefined;
+---
+{screenshotSize ? (
+  <figure class="browser-figure safari-capture">
+    <img src={`${assetBase}/images/safari-omnibar.png`} width={screenshotSize.width} height={screenshotSize.height} alt="Safari with tabs in the sidebar and Omnibar’s native address and search popover open." />
+    <figcaption>Omnibar in Safari. Your tabs to the side, your next destination close at hand.</figcaption>
+  </figure>
+) : (
+<figure class="browser-figure">
+  <div class="browser-demo" role="img" aria-label="Illustration of Safari with tabs in its sidebar and an Omnibar popover showing the current address.">
+    <div class="browser-toolbar">
+      <span class="traffic-lights"><i></i><i></i><i></i></span>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4" width="16" height="12" rx="2"/><path d="M7 4v12"/></svg>
+      <span class="toolbar-spacer"></span>
+      <span class="toolbar-arrow">‹</span><span class="toolbar-arrow muted">›</span>
+      <span class="mini-address">example.com</span>
+      <span class="toolbar-omnibar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="5"/><path d="M6 12h10m-3-3 3 3-3 3"/></svg></span>
+    </div>
+    <div class="browser-body">
+      <aside class="demo-sidebar">
+        <span class="sidebar-label">Your tabs</span>
+        <div class="demo-tab selected"><span class="tab-dot"></span> A good place to start</div>
+        <div class="demo-tab"><span class="tab-dot outline"></span> Reading list</div>
+        <div class="demo-tab"><span class="tab-dot square"></span> Something interesting</div>
+      </aside>
+      <div class="demo-page">
+        <span class="page-kicker">THE OPEN WEB</span>
+        <span class="page-title">A good place<br />to start.</span>
+        <span class="page-rule"></span>
+        <span class="page-line"></span><span class="page-line short"></span>
+        <div class="paper-orbit"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="demo-popover">
+      <img src={`${assetBase}/images/omnibar-popover-light.png`} width="1040" height="200" alt="Omnibar’s native address field with a globe, inline Go arrow, search engine menu, keyboard hints, and settings button." />
+    </div>
+  </div>
+  <figcaption>One click from Safari’s toolbar. Out of the way when you’re done.</figcaption>
+</figure>
+)}
