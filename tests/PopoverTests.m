@@ -10,6 +10,9 @@
 @interface AddressPopoverController (Testing)
 - (void)navigate:(id)sender;
 - (void)openInNewTab:(id)sender;
+- (void)openExternalURL:(NSURL *)URL completionHandler:(void (^)(NSError *error))completionHandler;
+- (void)getSafariApplicationURLWithCompletionHandler:(void (^)(NSURL *applicationURL))completionHandler;
+- (void)openURL:(NSURL *)URL inApplicationAtURL:(NSURL *)applicationURL completionHandler:(void (^)(NSError *error))completionHandler;
 - (void)controlTextDidChange:(NSNotification *)notification;
 - (void)showSearchSettings:(id)sender;
 - (void)closeSearchSettings;
@@ -46,9 +49,36 @@
 
 @interface TestPopover : AddressPopoverController
 @property NSUInteger dismissals;
+@property (strong) NSURL *externallyOpenedURL;
+@property (strong) NSError *externalOpenError;
+@property BOOL deferExternalOpen;
+@property (copy) void (^externalReply)(NSError *);
+@property (strong) NSURL *safariApplicationURL;
+@property (strong) NSURL *safariOpenedURL;
+@property (strong) NSURL *safariOpenApplicationURL;
+@property (strong) NSError *safariOpenError;
+@property BOOL deferSafariApplication;
+@property BOOL deferSafariOpen;
+@property (copy) void (^safariApplicationReply)(NSURL *);
+@property (copy) void (^safariOpenReply)(NSError *);
 @end
 @implementation TestPopover
 - (void)dismissPopover { self.dismissals++; [self clearSession]; }
+- (void)openExternalURL:(NSURL *)URL completionHandler:(void (^)(NSError *error))completionHandler {
+    self.externallyOpenedURL = URL;
+    if (self.deferExternalOpen) self.externalReply = completionHandler;
+    else completionHandler(self.externalOpenError);
+}
+- (void)getSafariApplicationURLWithCompletionHandler:(void (^)(NSURL *applicationURL))completionHandler {
+    if (self.deferSafariApplication) self.safariApplicationReply = completionHandler;
+    else completionHandler(self.safariApplicationURL);
+}
+- (void)openURL:(NSURL *)URL inApplicationAtURL:(NSURL *)applicationURL completionHandler:(void (^)(NSError *error))completionHandler {
+    self.safariOpenedURL = URL;
+    self.safariOpenApplicationURL = applicationURL;
+    if (self.deferSafariOpen) self.safariOpenReply = completionHandler;
+    else completionHandler(self.safariOpenError);
+}
 - (void)setPreferredContentSize:(NSSize)size {
     [super setPreferredContentSize:size];
     if (self.isViewLoaded && self.view.window) [self.view.window setContentSize:size];
@@ -328,8 +358,7 @@ int main(int argc, const char *argv[]) {
         Check(internal.tab.navigatedURL == nil && before == controller.dismissals, @"malformed explicit URL stays open without navigation");
         Check(status.stringValue.length > 0, @"invalid address shows a readable message");
 
-        for (NSString *destination in @[@"about:blank", @"file:///tmp/Omnibar.html", @"mailto:person@example.com",
-                                        @"tel:123", @"custom://open", @"javascript:void(0)", @"data:text/plain,Hello"]) {
+        for (NSString *destination in @[@"file:///tmp/Omnibar.html", @"javascript:void(0)", @"data:text/plain,Hello"]) {
             for (NSUInteger newTab = 0; newTab < 2; newTab++) {
                 TestSafariWindow *schemeWindow = SafariWindow(@"https://example.com/");
                 [controller prepareForWindow:(id)schemeWindow]; Drain(); Type(controller, destination);
@@ -344,6 +373,95 @@ int main(int argc, const char *argv[]) {
                       @"explicit scheme preserves the requested destination tab");
             }
         }
+
+        for (NSString *destination in @[@"about:blank", @"about:blank#section"]) {
+            TestSafariWindow *blankWindow = SafariWindow(@"https://example.com/");
+            [controller prepareForWindow:(id)blankWindow]; Drain(); Type(controller, destination);
+            before = controller.dismissals; [controller navigate:nil]; Drain();
+            Check([blankWindow.openedURL.absoluteString isEqualToString:destination] && blankWindow.tab.navigatedURL == nil
+                  && controller.dismissals == before + 1, @"about:blank uses Safari's tab-opening API with completion reporting");
+            Check(controller.safariOpenedURL == nil, @"a successful Safari tab opening needs no application-opening fallback");
+        }
+        TestSafariWindow *rejectedBlank = SafariWindow(@"https://example.com/"); rejectedBlank.failOpen = YES;
+        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank");
+        before = controller.dismissals; [controller navigate:nil]; Drain();
+        Check(controller.dismissals == before && [status.stringValue containsString:@"unavailable"] && field.stringValue.length > 0,
+              @"an unavailable Safari host keeps the blank-page input visible and reports failure");
+        Check(controller.safariOpenedURL == nil && ((NSButton *)[controller valueForKey:@"goButton"]).enabled,
+              @"a missing Safari application never falls back to the system default browser and permits retry");
+        controller.safariApplicationURL = [NSURL fileURLWithPath:@"/Applications/Safari Technology Preview.app"];
+        [controller navigate:nil]; Drain();
+        Check(controller.dismissals == before + 1 && [controller.safariOpenedURL.absoluteString isEqualToString:@"about:blank"]
+              && [controller.safariOpenApplicationURL isEqual:controller.safariApplicationURL],
+              @"a rejected blank tab is handed to the connected Safari application through the workspace API");
+
+        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank#section");
+        controller.safariOpenError = [NSError errorWithDomain:@"test" code:2
+                                                    userInfo:@{NSLocalizedDescriptionKey: @"Safari rejected the blank page."}];
+        before = controller.dismissals; [controller navigate:nil]; Drain();
+        Check(controller.dismissals == before && [status.stringValue containsString:@"rejected"]
+              && [controller.safariOpenedURL.absoluteString isEqualToString:@"about:blank#section"],
+              @"Safari application-opening errors remain visible and preserve the complete blank-page URL");
+        controller.safariOpenError = nil;
+        controller.safariOpenedURL = nil;
+        controller.deferSafariApplication = YES;
+        [controller navigate:nil]; Drain();
+        Check(!((NSButton *)[controller valueForKey:@"goButton"]).enabled, @"Safari application lookup disables repeated submission");
+        [controller clearSession];
+        [controller prepareForWindow:(id)SafariWindow(@"https://later-session.example/")]; Drain();
+        before = controller.dismissals;
+        controller.safariApplicationReply(controller.safariApplicationURL); controller.safariApplicationReply = nil;
+        controller.deferSafariApplication = NO; Drain();
+        Check(controller.safariOpenedURL == nil && controller.dismissals == before
+              && [field.stringValue isEqualToString:@"https://later-session.example/"],
+              @"a late Safari application lookup cannot open a URL after the original popover closes");
+
+        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank");
+        controller.deferSafariOpen = YES;
+        [controller navigate:nil]; Drain();
+        [controller clearSession];
+        [controller prepareForWindow:(id)SafariWindow(@"https://another-session.example/")]; Drain();
+        before = controller.dismissals;
+        controller.safariOpenReply(nil); controller.safariOpenReply = nil; controller.deferSafariOpen = NO; Drain();
+        Check(controller.dismissals == before && [field.stringValue isEqualToString:@"https://another-session.example/"],
+              @"a late Safari application-open completion cannot dismiss a subsequent popover");
+
+        for (NSString *destination in @[@"mailto:person@example.com", @"tel:123", @"custom://open"]) {
+            for (NSUInteger newTab = 0; newTab < 2; newTab++) {
+                TestSafariWindow *externalWindow = SafariWindow(@"https://example.com/");
+                [controller prepareForWindow:(id)externalWindow]; Drain(); Type(controller, destination);
+                before = controller.dismissals;
+                if (newTab) [controller openInNewTab:nil];
+                else [controller navigate:nil];
+                Drain();
+                Check([controller.externallyOpenedURL.absoluteString isEqualToString:destination] && controller.dismissals == before + 1,
+                      @"external links use the system handler for Return and Command-Return");
+                Check(externalWindow.tab.navigatedURL == nil && externalWindow.openedURL == nil,
+                      @"external app links do not navigate or create Safari tabs");
+            }
+        }
+
+        TestSafariWindow *failedExternal = SafariWindow(@"https://example.com/");
+        [controller prepareForWindow:(id)failedExternal]; Drain(); Type(controller, @"custom://open");
+        controller.externalOpenError = [NSError errorWithDomain:@"test" code:1
+                                                      userInfo:@{NSLocalizedDescriptionKey: @"No application is registered for this URL type."}];
+        before = controller.dismissals; [controller navigate:nil]; Drain();
+        Check(before == controller.dismissals && [status.stringValue containsString:@"No application"],
+              @"system handler failures keep the popover open and show the error");
+        Check(field.stringValue.length > 0 && ((NSButton *)[controller valueForKey:@"goButton"]).enabled,
+              @"a failed external link retains editable input and allows another attempt");
+        Check(failedExternal.tab.navigatedURL == nil && failedExternal.openedURL == nil,
+              @"failed external links never fall back to a search");
+        controller.externalOpenError = nil;
+        controller.deferExternalOpen = YES;
+        [controller navigate:nil]; Drain();
+        Check(!((NSButton *)[controller valueForKey:@"goButton"]).enabled, @"external opening disables repeated submission until completion");
+        [controller clearSession];
+        [controller prepareForWindow:(id)SafariWindow(@"https://new-session.example/")]; Drain();
+        before = controller.dismissals;
+        controller.externalReply(nil); controller.externalReply = nil; controller.deferExternalOpen = NO; Drain();
+        Check(before == controller.dismissals && [field.stringValue isEqualToString:@"https://new-session.example/"],
+              @"a late external-open callback cannot dismiss or mutate a later popover session");
 
         TestSafariWindow *command = SafariWindow(@"https://example.com/");
         [controller prepareForWindow:(id)command]; Drain(); Type(controller, @"apple.com");

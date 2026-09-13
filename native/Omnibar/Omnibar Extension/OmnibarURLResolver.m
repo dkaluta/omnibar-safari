@@ -184,7 +184,7 @@
 + (nullable NSURL *)explicitURL:(NSString *)value error:(NSError * _Nullable * _Nullable)error {
     NSURL *URL = [NSURL URLWithString:value];
     if (!URL.scheme.length) return [self fail:@"That URL is not valid. Check the address." error:error];
-    // Safari owns scheme handling and any permission or external-app prompts.
+    // The navigation layer delegates handling to Safari or macOS's default app.
     return URL;
 }
 

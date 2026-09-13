@@ -510,6 +510,32 @@ static BOOL OmnibarIsCommandReturn(NSEvent *event) {
 }
 
 - (void)navigateToURL:(NSURL *)URL inNewTab:(BOOL)newTab {
+    NSString *destinationWithoutFragment = [URL.absoluteString componentsSeparatedByString:@"#"].firstObject;
+    // Safari silently ignores about:blank in navigateToURL:. The tab-opening API
+    // has a completion handler so rejection can be surfaced instead of dismissed.
+    BOOL blankPage = [destinationWithoutFragment caseInsensitiveCompare:@"about:blank"] == NSOrderedSame;
+    if (blankPage) newTab = YES;
+    NSSet<NSString *> *browserSchemes = [NSSet setWithArray:@[
+        @"http", @"https", @"about", @"file", @"data", @"blob", @"javascript",
+        @"favorites", @"topsites", @"safari", @"safari-extension", @"safari-web-extension"
+    ]];
+    if (![browserSchemes containsObject:URL.scheme.lowercaseString]) {
+        self.openingTab = YES;
+        self.goButton.enabled = NO;
+        NSUInteger generation = self.sessionGeneration;
+        __weak typeof(self) weakSelf = self;
+        [self openExternalURL:URL completionHandler:^(NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                typeof(self) self = weakSelf;
+                if (!self || generation != self.sessionGeneration || !self.sessionWindow) return;
+                self.openingTab = NO;
+                self.goButton.enabled = YES;
+                if (!error) [self dismissPopover];
+                else [self setStatus:error.localizedDescription ?: @"macOS couldn’t open this link. Check its address and default app." isError:YES];
+            });
+        }];
+        return;
+    }
 
     if (!newTab && self.sessionTab) {
         [self.sessionTab navigateToURL:URL];
@@ -525,11 +551,77 @@ static BOOL OmnibarIsCommandReturn(NSEvent *event) {
         dispatch_async(dispatch_get_main_queue(), ^{
             typeof(self) self = weakSelf;
             if (!self || generation != self.sessionGeneration || !self.sessionWindow) return;
+            if (!tab && blankPage) {
+                [self openBlankURLInSafari:URL];
+                return;
+            }
             self.openingTab = NO;
             self.goButton.enabled = YES;
             if (tab) [self dismissPopover];
             else [self setStatus:@"Safari couldn’t open a new tab. Please try again." isError:YES];
         });
+    }];
+}
+
+- (void)openBlankURLInSafari:(NSURL *)URL {
+    self.openingTab = YES;
+    self.goButton.enabled = NO;
+    NSUInteger generation = self.sessionGeneration;
+    __weak typeof(self) weakSelf = self;
+    [self getSafariApplicationURLWithCompletionHandler:^(NSURL *applicationURL) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            typeof(self) self = weakSelf;
+            if (!self || generation != self.sessionGeneration || !self.sessionWindow) return;
+            if (!applicationURL) {
+                self.openingTab = NO;
+                self.goButton.enabled = YES;
+                [self setStatus:@"Safari’s application is unavailable. Reopen Omnibar to try again." isError:YES];
+                return;
+            }
+            [self openURL:URL inApplicationAtURL:applicationURL completionHandler:^(NSError *error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    typeof(self) self = weakSelf;
+                    if (!self || generation != self.sessionGeneration || !self.sessionWindow) return;
+                    self.openingTab = NO;
+                    self.goButton.enabled = YES;
+                    if (!error) [self dismissPopover];
+                    else [self setStatus:error.localizedDescription ?: @"Safari couldn’t open the blank page." isError:YES];
+                });
+            }];
+        });
+    }];
+}
+
+- (void)getSafariApplicationURLWithCompletionHandler:(void (^)(NSURL *applicationURL))completionHandler {
+    // Use the connected browser, including Safari Technology Preview, rather than
+    // the system default browser or a hard-coded application path.
+    [SFSafariApplication getHostApplicationWithCompletionHandler:^(NSRunningApplication *application) {
+        completionHandler(application.bundleURL);
+    }];
+}
+
+- (void)openURL:(NSURL *)URL inApplicationAtURL:(NSURL *)applicationURL completionHandler:(void (^)(NSError *error))completionHandler {
+    [NSWorkspace.sharedWorkspace openURLs:@[URL] withApplicationAtURL:applicationURL
+                            configuration:NSWorkspaceOpenConfiguration.configuration
+                        completionHandler:^(NSRunningApplication *application, NSError *error) {
+        if (!application && !error) {
+            error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError
+                                   userInfo:@{NSLocalizedDescriptionKey: @"Safari couldn’t open the blank page."}];
+        }
+        completionHandler(error);
+    }];
+}
+
+- (void)openExternalURL:(NSURL *)URL completionHandler:(void (^)(NSError *error))completionHandler {
+    // Launch Services opens mailto, tel, and app-specific links in their default handler.
+    // Keep the system's default prompting behavior and report failures in the popover.
+    [NSWorkspace.sharedWorkspace openURL:URL configuration:NSWorkspaceOpenConfiguration.configuration
+                      completionHandler:^(NSRunningApplication *app, NSError *error) {
+        if (!app && !error) {
+            error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError
+                                   userInfo:@{NSLocalizedDescriptionKey: @"macOS couldn’t open this link. Check its address and default app."}];
+        }
+        completionHandler(error);
     }];
 }
 
