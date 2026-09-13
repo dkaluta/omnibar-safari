@@ -39,7 +39,7 @@ jobs:
       - name: Build static website
         working-directory: website
         env:
-          ASTRO_SITE: ${{ steps.pages.outputs.origin }}
+          ASTRO_SITE: https://dkaluta.com
           ASTRO_BASE: ${{ steps.pages.outputs.base_path }}
           PUBLIC_APP_STORE_URL: ${{ vars.APP_STORE_URL }}
         run: npm run build
