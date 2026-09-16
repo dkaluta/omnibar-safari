@@ -629,7 +629,12 @@ static BOOL OmnibarIsCommandReturn(NSEvent *event) {
     self.statusLabel.stringValue = message;
     self.statusLabel.textColor = isError ? NSColor.systemRedColor : NSColor.secondaryLabelColor;
     self.statusLabel.hidden = [message isEqualToString:OmnibarKeyboardHint];
-    if (!self.showingSettings) self.preferredContentSize = NSMakeSize(OmnibarWidth, self.statusLabel.hidden ? OmnibarHeight : OmnibarHeight + 36);
+    if (!self.showingSettings) {
+        NSSize size = NSMakeSize(OmnibarWidth, self.statusLabel.hidden ? OmnibarHeight : OmnibarHeight + 36);
+        // Safari hosts this view remotely. Avoid refreshing its popover geometry
+        // while AppKit is presenting input-method UI for the current text edit.
+        if (!NSEqualSizes(self.preferredContentSize, size)) self.preferredContentSize = size;
+    }
     if (isError) {
         NSAccessibilityPostNotificationWithUserInfo(self.statusLabel, NSAccessibilityAnnouncementRequestedNotification, @{
             NSAccessibilityAnnouncementKey: message,
