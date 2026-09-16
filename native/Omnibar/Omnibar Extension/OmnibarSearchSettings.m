@@ -5,6 +5,7 @@
 static NSString * const SelectedEngineKey = @"searchEngine";
 static NSString * const CustomEnginesKey = @"customSearchEngines";
 static NSString * const EngineOrderKey = @"searchEngineOrder";
+static NSString * const RemovedDefaultEngineIDsKey = @"removedDefaultSearchEngineIDs";
 
 static void SettingsError(NSError **error, NSString *message) {
     if (error) *error = [NSError errorWithDomain:@"com.dkaluta.omnibar.settings" code:1
@@ -122,8 +123,37 @@ static void SettingsError(NSError **error, NSString *message) {
     return engines;
 }
 
+- (NSArray<NSDictionary<NSString *, NSString *> *> *)availableSearchEngines {
+    NSArray *catalog = OmnibarURLResolver.searchEngines;
+    NSArray *catalogIDs = [catalog valueForKey:@"id"];
+    id storedRemoved = [self.defaults objectForKey:RemovedDefaultEngineIDsKey];
+    NSMutableArray *removed = [NSMutableArray new];
+    if ([storedRemoved isKindOfClass:NSArray.class]) {
+        for (id identifier in storedRemoved) {
+            if ([identifier isKindOfClass:NSString.class] && [catalogIDs containsObject:identifier]
+                && ![removed containsObject:identifier]) [removed addObject:identifier];
+        }
+    }
+    NSMutableArray *available = [NSMutableArray new];
+    for (NSDictionary *engine in catalog) {
+        if (![removed containsObject:engine[@"id"]]) [available addObject:engine];
+    }
+    [available addObjectsFromArray:self.customSearchEngines];
+    // Normal removals retain an engine. Recover just one regional default if
+    // corrupt preferences otherwise leave no usable engine at all.
+    if (!available.count && catalog.count) {
+        NSDictionary *fallback = catalog.firstObject;
+        [available addObject:fallback];
+        [removed removeObject:fallback[@"id"]];
+    }
+    if (![removed isEqual:storedRemoved]) {
+        [self.defaults setObject:removed forKey:RemovedDefaultEngineIDsKey];
+    }
+    return available;
+}
+
 - (NSArray<NSDictionary<NSString *, NSString *> *> *)searchEngines {
-    NSArray *available = [OmnibarURLResolver.searchEngines arrayByAddingObjectsFromArray:self.customSearchEngines];
+    NSArray *available = [self availableSearchEngines];
     id storedOrder = [self.defaults objectForKey:EngineOrderKey];
     NSArray *order = [storedOrder isKindOfClass:NSArray.class] ? storedOrder : @[];
     // Preserve the preferred engine from versions that predate reordering.
@@ -153,6 +183,15 @@ static void SettingsError(NSError **error, NSString *message) {
         [self.defaults setObject:normalizedOrder forKey:EngineOrderKey];
     }
     return ordered;
+}
+
+- (NSArray<NSDictionary<NSString *, NSString *> *> *)removedDefaultSearchEngines {
+    NSArray *activeIDs = [self.searchEngines valueForKey:@"id"];
+    NSMutableArray *removed = [NSMutableArray new];
+    for (NSDictionary *engine in OmnibarURLResolver.searchEngines) {
+        if (![activeIDs containsObject:engine[@"id"]]) [removed addObject:engine];
+    }
+    return removed;
 }
 
 - (NSDictionary *)engineWithIdentifier:(NSString *)identifier {
@@ -190,7 +229,9 @@ static void SettingsError(NSError **error, NSString *message) {
     if (!validated) return nil;
     NSMutableArray *engines = self.customSearchEngines.mutableCopy;
     NSUInteger index = NSNotFound;
-    for (NSDictionary *engine in self.searchEngines) {
+    // Reserve all catalog names, including engines the user has removed, so
+    // restoring a default never introduces a duplicate custom engine name.
+    for (NSDictionary *engine in [OmnibarURLResolver.searchEngines arrayByAddingObjectsFromArray:engines]) {
         if ([engine[@"id"] isEqualToString:identifier]) continue;
         if ([engine[@"name"] caseInsensitiveCompare:trimmedName] == NSOrderedSame) {
             SettingsError(error, @"An engine with that name already exists. Choose another name.");
@@ -215,15 +256,49 @@ static void SettingsError(NSError **error, NSString *message) {
 }
 
 - (void)removeCustomEngineWithIdentifier:(NSString *)identifier {
-    NSMutableArray *engines = self.customSearchEngines.mutableCopy;
-    NSIndexSet *matches = [engines indexesOfObjectsPassingTest:^BOOL(NSDictionary *engine, NSUInteger position, BOOL *stop) {
-        return [engine[@"id"] isEqualToString:identifier];
-    }];
-    [engines removeObjectsAtIndexes:matches];
-    [self.defaults setObject:engines forKey:CustomEnginesKey];
-    // Stale IDs are ignored by searchEngines; the next ordered item becomes default.
-    [self.defaults setObject:[self.searchEngines valueForKey:@"id"] forKey:EngineOrderKey];
-    [self.defaults setObject:self.selectedEngineID forKey:SelectedEngineKey];
+    if ([identifier hasPrefix:@"custom:"]) [self removeEngineWithIdentifier:identifier];
+}
+
+- (void)removeEngineWithIdentifier:(NSString *)identifier {
+    NSMutableArray *order = [[self.searchEngines valueForKey:@"id"] mutableCopy];
+    if (order.count <= 1 || ![order containsObject:identifier]) return;
+    if ([[OmnibarURLResolver.searchEngines valueForKey:@"id"] containsObject:identifier]) {
+        NSMutableArray *removed = [[self.defaults objectForKey:RemovedDefaultEngineIDsKey] mutableCopy];
+        [removed addObject:identifier];
+        [self.defaults setObject:removed forKey:RemovedDefaultEngineIDsKey];
+    } else {
+        NSMutableArray *custom = self.customSearchEngines.mutableCopy;
+        NSIndexSet *matches = [custom indexesOfObjectsPassingTest:^BOOL(NSDictionary *engine, NSUInteger position, BOOL *stop) {
+            return [engine[@"id"] isEqualToString:identifier];
+        }];
+        [custom removeObjectsAtIndexes:matches];
+        [self.defaults setObject:custom forKey:CustomEnginesKey];
+    }
+    [order removeObject:identifier];
+    [self.defaults setObject:order forKey:EngineOrderKey];
+    [self.defaults setObject:order.firstObject forKey:SelectedEngineKey];
+}
+
+- (void)restoreDefaultEngineWithIdentifier:(NSString *)identifier {
+    if (![[OmnibarURLResolver.searchEngines valueForKey:@"id"] containsObject:identifier]) return;
+    NSMutableArray *order = [[self.searchEngines valueForKey:@"id"] mutableCopy];
+    if ([order containsObject:identifier]) return;
+    NSMutableArray *removed = [[self.defaults objectForKey:RemovedDefaultEngineIDsKey] mutableCopy];
+    [removed removeObject:identifier];
+    [self.defaults setObject:removed forKey:RemovedDefaultEngineIDsKey];
+    [order addObject:identifier];
+    [self.defaults setObject:order forKey:EngineOrderKey];
+    [self.defaults setObject:order.firstObject forKey:SelectedEngineKey];
+}
+
+- (void)restoreDefaultSearchEngines {
+    NSMutableArray *order = [[OmnibarURLResolver.searchEngines valueForKey:@"id"] mutableCopy];
+    for (NSDictionary *engine in self.searchEngines) {
+        if ([engine[@"id"] hasPrefix:@"custom:"]) [order addObject:engine[@"id"]];
+    }
+    [self.defaults setObject:@[] forKey:RemovedDefaultEngineIDsKey];
+    [self.defaults setObject:order forKey:EngineOrderKey];
+    [self.defaults setObject:order.firstObject forKey:SelectedEngineKey];
 }
 
 - (BOOL)saveKagiPrivateURL:(NSString *)URL error:(NSError **)error {

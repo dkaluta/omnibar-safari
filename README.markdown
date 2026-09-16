@@ -12,11 +12,15 @@ The built-in catalogue contains Google, DuckDuckGo, Bing, Yahoo, Ecosia, Kagi, S
 
 On first use, the Mac’s **Region** setting puts relevant engines first: Naver in South Korea; Baidu, Sogou, and 360 Search in China; Yandex in Russia; Seznam in Czechia; and Yahoo Japan in Japan. Other regions start with Google. This uses the local region setting, with no location permission or network lookup. The initial order is saved, so changing region later does not reorder engines.
 
-In Search Settings → Search Engines, drag an engine to reorder it, or select it and use the up/down buttons below the list. **The first engine is the default.** Existing installations keep their previous preferred engine at the top. All built-ins remain available in every region. Safari’s selected search engine is not synchronized.
+In Search Settings → Search Engines, drag an engine to reorder it, or select it and use the up/down buttons below the list. **The first engine is the default.** Existing installations keep their previous preferred engine at the top. All built-ins can be used in every region. Safari’s selected search engine is not synchronized.
 
-Click **Add** to open the engine editor, enter a name and an HTTP(S) search URL containing `%s`, then save it. For example, `https://example.com/search?q=%s`. `{searchTerms}` is also accepted. Search text is encoded before substitution. A newly saved custom engine moves to the top; select a custom engine and click **Edit** or **Remove** to change it. Canceling the editor leaves your saved settings unchanged. Built-in engines can be reordered.
+Choose **Add → Custom Search Engine…** to open the engine editor, enter a name and an HTTP(S) search URL containing `%s`, then save it. For example, `https://example.com/search?q=%s`. `{searchTerms}` is also accepted. Search text is encoded before substitution. A newly saved custom engine moves to the top; select a custom engine and click **Edit** to change it. Canceling the editor leaves your saved settings unchanged.
+
+Select any built-in or custom engine and click **Remove** to remove it from the list. Removing the first engine makes the next one the default; at least one engine must remain. Removed built-ins appear in the **Add** menu and can be added back individually at the end of your list, preserving your current default and order. **Restore Defaults** brings back every built-in in the original order for your current region, followed by your custom engines in their existing relative order. Custom engine definitions and your saved Kagi link are kept.
 
 ### Kagi in Private Browsing
+
+The **Kagi Private Browsing** section appears only while Kagi is in your search-engine list. Removing Kagi hides the section and clears any unsaved input; adding it back makes the section available again and retains any previously saved link.
 
 Regular Kagi searches use your existing Safari sign-in. For private windows, you can optionally paste a [Kagi session link](https://help.kagi.com/kagi/privacy/private-browser-sessions.html) into the secure field in Search Settings → Kagi Private Browsing and click **Save Link**:
 
@@ -74,7 +78,7 @@ Safari also asks for website access before it supplies the current page’s addr
 
 ## Privacy
 
-Omnibar saves the engine order and custom engine names/URL templates in local preferences. The optional Kagi private session link is stored separately in the local Keychain and is not synchronized to iCloud by Omnibar. Custom engine templates are ordinary preferences, so do not use them to store credentials.
+Omnibar saves the engine order, removed built-in engine choices, and custom engine names/URL templates in local preferences. The optional Kagi private session link is stored separately in the local Keychain and is not synchronized to iCloud by Omnibar. Custom engine templates are ordinary preferences, so do not use them to store credentials.
 
 Omnibar reads the active tab’s URL when the popover opens, holds it in memory for that session, and clears it when the popover closes. It does not store browsing history, fetch suggestions, run analytics, or read page contents. Search text goes to the selected search engine only when submitted, through ordinary Safari navigation.
 

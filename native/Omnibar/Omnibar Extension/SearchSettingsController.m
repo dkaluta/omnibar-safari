@@ -27,8 +27,10 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 @property (nonatomic, strong) NSTableView *engineTable;
 @property (nonatomic, strong) NSTextField *nameField;
 @property (nonatomic, strong) NSTextField *templateField;
+@property (nonatomic, strong) NSPopUpButton *addEngineButton;
 @property (nonatomic, strong) NSButton *editEngineButton;
 @property (nonatomic, strong) NSButton *removeEngineButton;
+@property (nonatomic, strong) NSButton *restoreDefaultsButton;
 @property (nonatomic, strong) NSButton *saveEngineButton;
 @property (nonatomic, strong) NSButton *cancelEditorButton;
 @property (nonatomic, strong) NSButton *moveUpButton;
@@ -175,9 +177,15 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     [table setDraggingSourceOperationMask:NSDragOperationNone forLocal:NO];
     scroll.documentView = table;
     self.engineTable = table;
-    NSButton *add = [self button:@"Add…" action:@selector(addEngine:)];
+    NSPopUpButton *add = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:YES];
+    add.translatesAutoresizingMaskIntoConstraints = NO;
+    add.bezelStyle = NSBezelStyleRounded;
+    add.font = [NSFont systemFontOfSize:13];
+    self.addEngineButton = add;
     self.editEngineButton = [self button:@"Edit…" action:@selector(editEngine:)];
     self.removeEngineButton = [self button:@"Remove" action:@selector(removeEngine:)];
+    self.restoreDefaultsButton = [self button:@"Restore Defaults" action:@selector(restoreDefaults:)];
+    self.restoreDefaultsButton.toolTip = @"Restore all built-in engines in their original order. Custom engines and your saved Kagi link are kept.";
     self.moveUpButton = [self button:@"" action:@selector(moveEngineUp:)];
     self.moveDownButton = [self button:@"" action:@selector(moveEngineDown:)];
     self.moveUpButton.image = [NSImage imageWithSystemSymbolName:@"chevron.up" accessibilityDescription:@"Move up"];
@@ -188,10 +196,11 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     self.moveDownButton.accessibilityLabel = @"Move selected engine down";
     self.moveUpButton.toolTip = @"Move up. The first engine is the default.";
     self.moveDownButton.toolTip = @"Move down. The first engine is the default.";
-    add.accessibilityLabel = @"Add custom search engine";
+    add.accessibilityLabel = @"Add search engine";
+    add.toolTip = @"Add a custom search engine or bring back a removed default engine.";
     self.editEngineButton.accessibilityLabel = @"Edit selected custom search engine";
-    self.removeEngineButton.accessibilityLabel = @"Remove selected custom search engine";
-    for (NSView *view in @[hint, scroll, add, self.editEngineButton, self.removeEngineButton, self.moveUpButton, self.moveDownButton]) [pane addSubview:view];
+    self.removeEngineButton.accessibilityLabel = @"Remove selected search engine";
+    for (NSView *view in @[hint, scroll, add, self.editEngineButton, self.removeEngineButton, self.restoreDefaultsButton, self.moveUpButton, self.moveDownButton]) [pane addSubview:view];
     [NSLayoutConstraint activateConstraints:@[
         [hint.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
         [hint.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
@@ -208,12 +217,15 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
         [self.editEngineButton.widthAnchor constraintEqualToConstant:70],
         [self.removeEngineButton.leadingAnchor constraintEqualToAnchor:self.editEngineButton.trailingAnchor constant:8],
         [self.removeEngineButton.widthAnchor constraintEqualToConstant:84],
+        [self.restoreDefaultsButton.leadingAnchor constraintEqualToAnchor:self.removeEngineButton.trailingAnchor constant:8],
+        [self.restoreDefaultsButton.widthAnchor constraintEqualToConstant:138],
+        [self.restoreDefaultsButton.trailingAnchor constraintLessThanOrEqualToAnchor:self.moveUpButton.leadingAnchor constant:-8],
         [self.moveDownButton.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
         [self.moveDownButton.widthAnchor constraintEqualToConstant:32],
         [self.moveUpButton.trailingAnchor constraintEqualToAnchor:self.moveDownButton.leadingAnchor constant:-6],
         [self.moveUpButton.widthAnchor constraintEqualToConstant:32],
     ]];
-    for (NSButton *button in @[self.editEngineButton, self.removeEngineButton, self.moveUpButton, self.moveDownButton]) {
+    for (NSButton *button in @[self.editEngineButton, self.removeEngineButton, self.restoreDefaultsButton, self.moveUpButton, self.moveDownButton]) {
         [NSLayoutConstraint activateConstraints:@[
             [button.centerYAnchor constraintEqualToAnchor:add.centerYAnchor],
             [button.heightAnchor constraintEqualToAnchor:add.heightAnchor],
@@ -320,7 +332,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)viewWillAppear {
     [super viewWillAppear];
-    if (self.paneControl.selectedSegment == 1 && !self.keychainBusy) [self refreshPrivateStatus];
+    if (self.hasKagiEngine && self.paneControl.selectedSegment == 1 && !self.keychainBusy) [self refreshPrivateStatus];
 }
 
 - (void)viewDidLayout {
@@ -338,17 +350,42 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)changePane:(id)sender {
     if (self.editingEngine) return;
-    BOOL privatePane = self.paneControl.selectedSegment == 1;
-    self.enginesPane.hidden = privatePane;
-    self.privatePane.hidden = !privatePane;
-    if (privatePane) [self refreshPrivateStatus];
+    [self updatePaneVisibility];
+    if (!self.privatePane.hidden) [self refreshPrivateStatus];
     else [self resetSensitiveFields];
 }
 
+- (BOOL)hasKagiEngine {
+    return [[self.orderedEngines valueForKey:@"id"] containsObject:@"kagi"];
+}
+
+- (void)updatePaneVisibility {
+    BOOL hasKagi = self.hasKagiEngine;
+    if (!hasKagi) {
+        self.paneControl.selectedSegment = 0;
+        [self resetSensitiveFields];
+    }
+    BOOL showTabs = hasKagi && !self.editingEngine;
+    BOOL showPrivate = showTabs && self.paneControl.selectedSegment == 1;
+    self.paneControl.hidden = !showTabs;
+    self.enginesPane.hidden = self.editingEngine || showPrivate;
+    self.privatePane.hidden = !showPrivate;
+    self.editorPane.hidden = !self.editingEngine;
+    // Without a section selector, place content directly below the heading.
+    if (showTabs) {
+        self.editorTopConstraint.active = NO;
+        self.paneTopConstraint.active = YES;
+    } else {
+        self.paneTopConstraint.active = NO;
+        self.editorTopConstraint.active = YES;
+    }
+}
+
 - (void)updatePrivateControls {
-    self.privateLinkField.enabled = !self.keychainBusy;
-    self.savePrivateButton.enabled = !self.keychainBusy && self.privateLinkField.stringValue.length > 0;
-    self.removePrivateButton.enabled = !self.keychainBusy && self.hasPrivateLink;
+    BOOL enabled = self.hasKagiEngine && !self.keychainBusy;
+    self.privateLinkField.enabled = enabled;
+    self.savePrivateButton.enabled = enabled && self.privateLinkField.stringValue.length > 0;
+    self.removePrivateButton.enabled = enabled && self.hasPrivateLink;
 }
 
 - (void)status:(NSTextField *)label message:(NSString *)message error:(BOOL)error announce:(BOOL)announce {
@@ -363,7 +400,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 }
 
 - (void)refreshPrivateStatus {
-    if (self.keychainBusy) return;
+    if (!self.hasKagiEngine || self.keychainBusy) return;
     self.keychainBusy = YES;
     NSUInteger generation = ++self.keychainGeneration;
     [self updatePrivateControls];
@@ -385,7 +422,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 }
 
 - (void)savePrivateLink:(id)sender {
-    if (self.keychainBusy || !self.privateLinkField.stringValue.length) return;
+    if (!self.hasKagiEngine || self.keychainBusy || !self.privateLinkField.stringValue.length) return;
     NSString *link = self.privateLinkField.stringValue;
     self.privateLinkField.stringValue = @"";
     self.privateLinkField.currentEditor.string = @"";
@@ -410,7 +447,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 }
 
 - (void)removePrivateLink:(id)sender {
-    if (self.keychainBusy) return;
+    if (!self.hasKagiEngine || self.keychainBusy) return;
     self.privateLinkField.stringValue = @"";
     self.privateLinkField.currentEditor.string = @"";
     self.keychainBusy = YES;
@@ -467,6 +504,28 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     if (index != NSNotFound) [self.engineTable selectRowIndexes:[NSIndexSet indexSetWithIndex:index] byExtendingSelection:NO];
     else [self.engineTable deselectAll:nil];
     [self updateSelectedActions];
+    [self updateAddMenu];
+    [self updatePaneVisibility];
+}
+
+- (void)updateAddMenu {
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Add Search Engine"];
+    menu.autoenablesItems = NO;
+    [menu addItemWithTitle:@"Add" action:NULL keyEquivalent:@""];
+    NSMenuItem *custom = [menu addItemWithTitle:@"Custom Search Engine…" action:@selector(addEngine:) keyEquivalent:@""];
+    custom.target = self;
+    NSArray *removed = self.settings.removedDefaultSearchEngines;
+    if (removed.count) {
+        [menu addItem:NSMenuItem.separatorItem];
+        NSMenuItem *heading = [menu addItemWithTitle:@"Removed Default Engines" action:NULL keyEquivalent:@""];
+        heading.enabled = NO;
+        for (NSDictionary *engine in removed) {
+            NSMenuItem *item = [menu addItemWithTitle:engine[@"name"] action:@selector(restoreDefaultEngine:) keyEquivalent:@""];
+            item.target = self;
+            item.representedObject = engine[@"id"];
+        }
+    }
+    self.addEngineButton.menu = menu;
 }
 
 - (void)updateSelectedActions {
@@ -474,7 +533,8 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     BOOL selected = row >= 0 && row < (NSInteger)self.orderedEngines.count;
     BOOL custom = [self customEngineWithIdentifier:self.selectedIdentifier] != nil;
     self.editEngineButton.enabled = custom;
-    self.removeEngineButton.enabled = custom;
+    self.removeEngineButton.enabled = selected && self.orderedEngines.count > 1;
+    self.removeEngineButton.toolTip = self.orderedEngines.count > 1 ? @"Remove the selected engine. Built-in engines can be added back from the Add menu." : @"Keep at least one search engine. Add another engine before removing this one.";
     self.moveUpButton.enabled = selected && row > 0;
     self.moveDownButton.enabled = selected && row < (NSInteger)self.orderedEngines.count - 1;
 }
@@ -595,12 +655,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     self.headingLabel.stringValue = engine ? @"Edit Search Engine" : @"Add Search Engine";
     self.doneButton.hidden = YES;
     self.saveEngineButton.title = engine ? @"Save Changes" : @"Add Engine";
-    self.paneControl.hidden = YES;
-    self.enginesPane.hidden = YES;
-    self.privatePane.hidden = YES;
-    self.editorPane.hidden = NO;
-    self.paneTopConstraint.active = NO;
-    self.editorTopConstraint.active = YES;
+    [self updatePaneVisibility];
     [self status:self.engineStatus message:@"" error:NO announce:NO];
     [self.view.window makeFirstResponder:self.nameField];
     [self.nameField selectText:nil];
@@ -614,13 +669,8 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     self.templateField.stringValue = @"";
     self.headingLabel.stringValue = @"Search Settings";
     self.doneButton.hidden = NO;
-    self.editorPane.hidden = YES;
-    self.enginesPane.hidden = NO;
-    self.privatePane.hidden = YES;
-    self.paneControl.hidden = NO;
     self.paneControl.selectedSegment = 0;
-    self.editorTopConstraint.active = NO;
-    self.paneTopConstraint.active = YES;
+    [self updatePaneVisibility];
     [self.view.window makeFirstResponder:self.engineTable];
 }
 
@@ -651,10 +701,27 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)removeEngine:(id)sender {
     NSString *identifier = self.selectedIdentifier;
-    if (![self customEngineWithIdentifier:identifier]) return;
-    [self.settings removeCustomEngineWithIdentifier:identifier];
+    if (self.editingEngine || !identifier || self.orderedEngines.count <= 1) return;
+    [self.settings removeEngineWithIdentifier:identifier];
     [self reloadEnginesSelecting:self.settings.selectedEngineID];
     [self announce:@"Search engine removed."];
+}
+
+- (void)restoreDefaultEngine:(NSMenuItem *)sender {
+    if (self.editingEngine || ![sender.representedObject isKindOfClass:NSString.class]) return;
+    NSString *identifier = sender.representedObject;
+    [self.settings restoreDefaultEngineWithIdentifier:identifier];
+    [self reloadEnginesSelecting:identifier];
+    if (self.engineTable.selectedRow >= 0) [self.engineTable scrollRowToVisible:self.engineTable.selectedRow];
+    [self announce:@"Default search engine added back."];
+}
+
+- (void)restoreDefaults:(id)sender {
+    if (self.editingEngine) return;
+    [self.settings restoreDefaultSearchEngines];
+    [self reloadEnginesSelecting:self.settings.selectedEngineID];
+    [self.engineTable scrollRowToVisible:0];
+    [self announce:@"Default search engines and their original order restored. Custom engines kept."];
 }
 
 - (void)controlTextDidChange:(NSNotification *)notification {

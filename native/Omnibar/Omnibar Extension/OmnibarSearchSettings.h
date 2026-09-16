@@ -18,11 +18,17 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy) NSString *selectedEngineID;
 @property (nonatomic, readonly) NSArray<NSDictionary<NSString *, NSString *> *> *searchEngines;
 @property (nonatomic, readonly) NSArray<NSDictionary<NSString *, NSString *> *> *customSearchEngines;
+@property (nonatomic, readonly) NSArray<NSDictionary<NSString *, NSString *> *> *removedDefaultSearchEngines;
 - (nullable NSDictionary<NSString *, NSString *> *)saveCustomEngine:(nullable NSString *)identifier
                                                             name:(NSString *)name
                                                         template:(NSString *)URLTemplate
                                                            error:(NSError * _Nullable * _Nullable)error;
 - (void)removeCustomEngineWithIdentifier:(NSString *)identifier;
+// The final remaining engine cannot be removed.
+- (void)removeEngineWithIdentifier:(NSString *)identifier;
+- (void)restoreDefaultEngineWithIdentifier:(NSString *)identifier;
+// Restore the regional default order, retaining custom engines and credentials.
+- (void)restoreDefaultSearchEngines;
 - (void)moveEngineWithIdentifier:(NSString *)identifier toIndex:(NSUInteger)index;
 - (BOOL)saveKagiPrivateURL:(NSString *)URL error:(NSError * _Nullable * _Nullable)error;
 - (BOOL)removeKagiPrivateURLWithError:(NSError * _Nullable * _Nullable)error;

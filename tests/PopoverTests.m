@@ -47,6 +47,16 @@
 - (NSEvent *)currentEvent { return self.testEvent ?: [super currentEvent]; }
 @end
 
+@interface TestSettingsCredentials : OMTestCredentials
+@property NSUInteger statusReads;
+@end
+@implementation TestSettingsCredentials
+- (BOOL)hasPrivateKagiURLWithError:(NSError **)error {
+    self.statusReads++;
+    return [super hasPrivateKagiURLWithError:error];
+}
+@end
+
 @interface TestPopover : AddressPopoverController
 @property NSUInteger dismissals;
 @property (strong) NSURL *externallyOpenedURL;
@@ -165,6 +175,187 @@ static void Type(TestPopover *controller, NSString *value) {
     NSTextField *field = [controller valueForKey:@"addressField"];
     field.stringValue = value;
     [controller controlTextDidChange:[NSNotification notificationWithName:NSControlTextDidChangeNotification object:field]];
+}
+
+static NSMenuItem *RestoreItem(SearchSettingsController *controller, NSString *identifier) {
+    NSPopUpButton *button = [controller valueForKey:@"addEngineButton"];
+    for (NSMenuItem *item in button.itemArray) {
+        if ([item.representedObject isEqual:identifier]) return item;
+    }
+    return nil;
+}
+
+static void SelectEngine(SearchSettingsController *controller, OmnibarSearchSettings *settings, NSString *identifier) {
+    NSUInteger row = [[settings.searchEngines valueForKey:@"id"] indexOfObject:identifier];
+    Check(row != NSNotFound, @"engine to select is present in Settings");
+    NSTableView *table = [controller valueForKey:@"engineTable"];
+    [table selectRowIndexes:[NSIndexSet indexSetWithIndex:row] byExtendingSelection:NO];
+}
+
+static void WaitForPrivateStatus(SearchSettingsController *controller) {
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:2];
+    do { Drain(); } while ([[controller valueForKey:@"keychainBusy"] boolValue] && deadline.timeIntervalSinceNow > 0);
+    Check(![[controller valueForKey:@"keychainBusy"] boolValue], @"fake credential status query completes");
+}
+
+static void CheckEngineFooterLayout(SearchSettingsController *controller) {
+    [controller.view layoutSubtreeIfNeeded];
+    CGFloat previousTrailing = -CGFLOAT_MAX;
+    for (NSString *key in @[@"addEngineButton", @"editEngineButton", @"removeEngineButton", @"restoreDefaultsButton", @"moveUpButton", @"moveDownButton"]) {
+        NSButton *button = [controller valueForKey:key];
+        NSRect frame = [button convertRect:button.bounds toView:controller.view];
+        Check(NSContainsRect(controller.view.bounds, frame), [key stringByAppendingString:@" fits inside the Settings popover"]);
+        NSRect alignment = [button.superview convertRect:[button alignmentRectForFrame:button.frame] toView:controller.view];
+        Check(NSMinX(alignment) >= previousTrailing, [key stringByAppendingString:@" does not overlap the preceding footer control"]);
+        previousTrailing = NSMaxX(alignment);
+    }
+}
+
+static void TestEngineManagement(void) {
+    OMTestDefaults *defaults = [OMTestDefaults new];
+    defaults.values[@"searchEngine"] = @"duckduckgo";
+    TestSettingsCredentials *credentials = [TestSettingsCredentials new];
+    credentials.URL = @"https://kagi.com/search?token=RETAINED_FAKE_TEST_TOKEN&q=%s";
+    NSString *savedCredential = credentials.URL;
+    OmnibarSearchSettings *settings = [[OmnibarSearchSettings alloc] initWithDefaults:(id)defaults credentialStore:credentials];
+    TestPopover *popover = [[TestPopover alloc] initWithNibName:nil bundle:nil];
+    [popover setValue:settings forKey:@"searchSettings"];
+    NSWindow *panel = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 520, 100)
+        styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+    panel.contentView = popover.view;
+    [popover prepareForWindow:(id)SafariWindow(@"https://example.com/")]; Drain();
+    Type(popover, @"preserved while managing engines");
+    [popover showSearchSettings:nil]; Drain();
+    SearchSettingsController *view = [popover valueForKey:@"settingsController"];
+    CheckEngineFooterLayout(view);
+    NSPopUpButton *add = [view valueForKey:@"addEngineButton"];
+    Check(add.pullsDown && [add.title isEqual:@"Add"], @"Add uses a native pull-down menu");
+    NSMenuItem *customItem = [add.menu itemWithTitle:@"Custom Search Engine…"];
+    Check(customItem && customItem.target == view && customItem.action == NSSelectorFromString(@"addEngine:"),
+          @"Add menu exposes the custom engine editor action");
+    Check(settings.removedDefaultSearchEngines.count == 0 && RestoreItem(view, @"kagi") == nil,
+          @"Add menu does not offer built-in engines already present");
+    Check(credentials.statusReads == 0, @"opening engine settings does not query private credential status");
+
+    NSString *removedDefault = settings.selectedEngineID;
+    NSString *nextDefault = settings.searchEngines[1][@"id"];
+    SelectEngine(view, settings, removedDefault);
+    NSButton *remove = [view valueForKey:@"removeEngineButton"];
+    Check(remove.enabled && ![(NSButton *)[view valueForKey:@"editEngineButton"] isEnabled],
+          @"a built-in engine can be removed but not edited");
+    [remove performClick:nil]; Drain();
+    Check([settings.selectedEngineID isEqual:nextDefault] && ![[settings.searchEngines valueForKey:@"id"] containsObject:removedDefault],
+          @"removing the first built-in engine promotes the next engine to default");
+    NSMenuItem *restoreItem = RestoreItem(view, removedDefault);
+    Check(restoreItem && restoreItem.target == view && restoreItem.action == NSSelectorFromString(@"restoreDefaultEngine:"),
+          @"a removed built-in engine appears as an actionable Add menu item");
+    [add.menu performActionForItemAtIndex:[add.menu indexOfItem:restoreItem]]; Drain();
+    Check([[settings.searchEngines valueForKey:@"id"] containsObject:removedDefault] && [settings.selectedEngineID isEqual:nextDefault],
+          @"the native Add menu restores a built-in without changing the default");
+    NSUInteger countAfterRestore = settings.searchEngines.count;
+    [NSApp sendAction:restoreItem.action to:restoreItem.target from:restoreItem];
+    Check(settings.searchEngines.count == countAfterRestore && RestoreItem(view, removedDefault) == nil,
+          @"restored built-ins disappear from Add and stale restore actions cannot duplicate them");
+
+    SelectEngine(view, settings, @"kagi");
+    NSSegmentedControl *panes = [view valueForKey:@"paneControl"];
+    panes.selectedSegment = 1;
+    [NSApp sendAction:panes.action to:panes.target from:panes];
+    WaitForPrivateStatus(view);
+    Check(credentials.statusReads > 0 && ![(NSView *)[view valueForKey:@"privatePane"] isHidden],
+          @"Kagi private settings can read status while Kagi is present");
+    ((NSTextField *)[view valueForKey:@"privateLinkField"]).stringValue = @"UNSAVED_SENSITIVE_TEST_INPUT";
+    [NSApp sendAction:NSSelectorFromString(@"removeEngine:") to:view from:nil]; Drain();
+    Check(panes.hidden && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && ![(NSView *)[view valueForKey:@"enginesPane"] isHidden],
+          @"removing Kagi hides its settings and returns to the engine list");
+    Check([(NSTextField *)[view valueForKey:@"privateLinkField"] stringValue].length == 0 && [credentials.URL isEqual:savedCredential],
+          @"removing Kagi clears typed sensitive input while preserving the saved private link");
+    Check([(NSLayoutConstraint *)[view valueForKey:@"editorTopConstraint"] isActive]
+          && ![(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
+          @"engine content reclaims the hidden Kagi tab space");
+    CheckEngineFooterLayout(view);
+    NSUInteger statusReadsWithoutKagi = credentials.statusReads;
+    panes.selectedSegment = 1;
+    [NSApp sendAction:panes.action to:panes.target from:panes];
+    [view viewWillAppear]; Drain();
+    Check(panes.selectedSegment == 0 && credentials.statusReads == statusReadsWithoutKagi
+          && [(NSView *)[view valueForKey:@"privatePane"] isHidden],
+          @"an absent Kagi pane cannot be activated or query credential status");
+    [popover closeSearchSettings]; Drain();
+    NSPopUpButton *engines = [popover valueForKey:@"engineButton"];
+    Check(![[engines.itemArray valueForKey:@"representedObject"] containsObject:@"kagi"]
+          && [engines.selectedItem.representedObject isEqual:settings.selectedEngineID],
+          @"closing Settings removes Kagi from the popover dropdown and refreshes the default");
+    Check([[(NSTextField *)[popover valueForKey:@"addressField"] stringValue] isEqual:@"preserved while managing engines"],
+          @"engine management preserves the unfinished address or search");
+
+    [popover showSearchSettings:nil]; Drain();
+    view = [popover valueForKey:@"settingsController"];
+    panes = [view valueForKey:@"paneControl"];
+    add = [view valueForKey:@"addEngineButton"];
+    Check(panes.hidden && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && credentials.statusReads == statusReadsWithoutKagi, @"reopening Settings keeps absent Kagi controls hidden without a credential query");
+    [add.menu performActionForItemAtIndex:[add.menu indexOfItemWithTitle:@"Custom Search Engine…"]];
+    Check([[view valueForKey:@"editingEngine"] boolValue], @"native Add menu opens the custom editor without Kagi");
+    [NSApp sendAction:NSSelectorFromString(@"cancelEditor:") to:view from:nil];
+    Check(panes.hidden && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && [(NSLayoutConstraint *)[view valueForKey:@"editorTopConstraint"] isActive],
+          @"canceling a custom editor does not reveal absent Kagi controls or their tab space");
+    restoreItem = RestoreItem(view, @"kagi");
+    Check(restoreItem != nil, @"Kagi can be added back from the native menu");
+    [add.menu performActionForItemAtIndex:[add.menu indexOfItem:restoreItem]]; Drain();
+    Check(!panes.hidden && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && [(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
+          @"adding Kagi back restores the section tabs without opening private settings");
+    Check([credentials.URL isEqual:savedCredential] && credentials.statusReads == statusReadsWithoutKagi,
+          @"adding Kagi back preserves its saved credential without querying it");
+    panes.selectedSegment = 1;
+    [NSApp sendAction:panes.action to:panes.target from:panes];
+    WaitForPrivateStatus(view);
+    Check([[view valueForKey:@"hasPrivateLink"] boolValue], @"restored Kagi settings recognize the retained private link");
+    panes.selectedSegment = 0;
+    [NSApp sendAction:panes.action to:panes.target from:panes];
+
+    [add.menu performActionForItemAtIndex:[add.menu indexOfItemWithTitle:@"Custom Search Engine…"]];
+    ((NSTextField *)[view valueForKey:@"nameField"]).stringValue = @"Retained Custom Engine";
+    ((NSTextField *)[view valueForKey:@"templateField"]).stringValue = @"https://example.org/search?q=%s";
+    [NSApp sendAction:NSSelectorFromString(@"saveEngine:") to:view from:nil];
+    NSDictionary *custom = settings.customSearchEngines.firstObject;
+    Check(custom != nil, @"custom engine is saved before restoring defaults");
+    SelectEngine(view, settings, @"kagi");
+    [(NSButton *)[view valueForKey:@"removeEngineButton"] performClick:nil];
+    NSButton *restoreDefaults = [view valueForKey:@"restoreDefaultsButton"];
+    Check(restoreDefaults.enabled && restoreDefaults.action == NSSelectorFromString(@"restoreDefaults:"),
+          @"Restore Defaults is available after engine changes");
+    [restoreDefaults performClick:nil]; Drain();
+    NSMutableArray *expectedIDs = [[OmnibarURLResolver.searchEngines valueForKey:@"id"] mutableCopy];
+    [expectedIDs addObject:custom[@"id"]];
+    Check([[settings.searchEngines valueForKey:@"id"] isEqual:expectedIDs] && [settings.selectedEngineID isEqual:expectedIDs.firstObject],
+          @"Restore Defaults reinstates built-in order and default while retaining custom engines at the end");
+    Check([settings.customSearchEngines isEqual:@[custom]] && settings.removedDefaultSearchEngines.count == 0
+          && [credentials.URL isEqual:savedCredential] && !panes.hidden,
+          @"Restore Defaults preserves custom engine data and credentials and brings back Kagi settings");
+
+    while (settings.searchEngines.count > 1) {
+        SelectEngine(view, settings, settings.searchEngines.firstObject[@"id"]);
+        [(NSButton *)[view valueForKey:@"removeEngineButton"] performClick:nil];
+    }
+    remove = [view valueForKey:@"removeEngineButton"];
+    Check(!remove.enabled && [settings.selectedEngineID isEqual:custom[@"id"]], @"Remove is disabled for the final remaining engine, including a custom engine");
+    [NSApp sendAction:NSSelectorFromString(@"removeEngine:") to:view from:nil];
+    Check(settings.searchEngines.count == 1, @"a stale Remove action cannot delete the final search engine");
+    [popover closeSearchSettings]; Drain();
+    Check(engines.numberOfItems == 1 && [engines.selectedItem.representedObject isEqual:custom[@"id"]],
+          @"popover dropdown reflects the final remaining custom engine after Settings closes");
+    [popover showSearchSettings:nil];
+    view = [popover valueForKey:@"settingsController"];
+    [(NSButton *)[view valueForKey:@"restoreDefaultsButton"] performClick:nil];
+    [popover closeSearchSettings]; Drain();
+    Check([[engines.itemArray valueForKey:@"representedObject"] isEqual:expectedIDs]
+          && [engines.selectedItem.representedObject isEqual:expectedIDs.firstObject],
+          @"restored defaults and retained custom engines return to the popover dropdown");
+    [popover clearSession];
 }
 
 int main(int argc, const char *argv[]) {
@@ -480,6 +671,7 @@ int main(int argc, const char *argv[]) {
         Check([controller control:field textView:nil doCommandBySelector:@selector(cancelOperation:)], @"Escape dismisses popover");
         Check(controller.dismissals == before + 1 && field.stringValue.length == 0, @"Escape clears session address");
 
+        TestEngineManagement();
         printf("Passed %lu native popover checks. Safari API calls were simulated.\n", (unsigned long)checks);
         if (argc > 2 && [@(argv[2]) isEqualToString:@"--preview"]) {
             [[NSUserDefaults standardUserDefaults] removeVolatileDomainForName:NSArgumentDomain];
@@ -490,7 +682,13 @@ int main(int argc, const char *argv[]) {
             BOOL darkPreview = [NSProcessInfo.processInfo.arguments containsObject:@"--dark"];
             controller.view.appearance = [NSAppearance appearanceNamed:darkPreview ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
             panel.appearance = controller.view.appearance;
+            BOOL previewWithoutKagi = [NSProcessInfo.processInfo.arguments containsObject:@"--preview-no-kagi"];
+            if (previewWithoutKagi) [settings removeEngineWithIdentifier:@"kagi"];
             [controller prepareForWindow:(id)SafariWindow(@"https://example.com/a?one=1#section")];
+            if (previewWithoutKagi || [NSProcessInfo.processInfo.arguments containsObject:@"--preview-settings"]) {
+                Drain();
+                [controller showSearchSettings:nil];
+            }
             [panel center];
             [panel makeKeyAndOrderFront:nil];
             [app activateIgnoringOtherApps:YES];
