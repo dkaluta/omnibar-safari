@@ -42,7 +42,7 @@ Explicit URLs are opened rather than searched. Web and browser URLs use Safari�
 
 ## Build and enable
 
-Requires macOS 13 or newer, full Xcode, and Safari. The default build uses an **Apple Development** certificate and the development team configured in the Xcode project. Sign in to your Apple Developer account in Xcode’s **Settings → Accounts** first; the build allows Xcode to manage provisioning.
+Requires macOS 13 or newer, Xcode 26 or newer, and Safari. The default build uses an **Apple Development** certificate and the development team configured in the Xcode project. Sign in to your Apple Developer account in Xcode’s **Settings → Accounts** first; the build allows Xcode to manage provisioning.
 
 ```sh
 ./scripts/test-resolver.sh
@@ -75,6 +75,12 @@ SIGNING_MODE=adhoc ./scripts/build-macos.sh
 Safari may require **Allow Unsigned Extensions** in its developer settings for an ad hoc build. Enable **Show features for web developers** in Safari’s **Advanced** settings to expose those controls; labels and placement vary by Safari version. This development permission may need to be enabled again after Safari restarts. The normal development-signed build does not use this unsigned-extension workaround. Distribution to other users requires appropriate Apple distribution signing and notarization or App Store delivery.
 
 Safari also asks for website access before it supplies the current page’s address. Grant access for the sites where you want Omnibar to show the URL, or allow it on all websites. When a page’s URL is unavailable, you can still type a destination or search. Safari’s Start Page and other internal pages may not expose a URL.
+
+## App icon
+
+The app icon is the editable Icon Composer document at `native/Omnibar/Omnibar/AppIcon.icon`. Open it in Icon Composer to adjust the blue background, glass address pill, and separate search, address, and navigation SVG layers. Xcode compiles this document for the app and generates compatible flattened icons for older macOS versions.
+
+The monochrome Safari toolbar button remains a separate PDF template. `./scripts/generate-assets.sh` regenerates only that toolbar icon; it does not overwrite the Icon Composer artwork.
 
 ## Privacy
 

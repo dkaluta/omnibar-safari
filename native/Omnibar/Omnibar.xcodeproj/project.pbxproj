@@ -7,19 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0000000000000000000000B2 /* AddressPopoverController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* AddressPopoverController.m */; };
+		0000000000000000000000B4 /* OmnibarURLResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A4 /* OmnibarURLResolver.m */; };
+		0000000000000000000000B5 /* Toolbar.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A5 /* Toolbar.pdf */; };
+		0000000000000000000000B7 /* OmnibarSearchSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A7 /* OmnibarSearchSettings.m */; };
+		0000000000000000000000B9 /* SearchSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A9 /* SearchSettingsController.m */; };
+		0000000000000000000000D1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C1 /* PrivacyInfo.xcprivacy */; };
+		0000000000000000000000D2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C2 /* PrivacyInfo.xcprivacy */; };
+		0000000000000000000000D3 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C3 /* AppIcon.icon */; };
 		4225A154305694F500A739B8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A153305694F500A739B8 /* AppDelegate.m */; };
 		4225A161305694F500A739B8 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A160305694F500A739B8 /* ViewController.m */; };
 		4225A166305694F600A739B8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4225A165305694F600A739B8 /* Assets.xcassets */; };
 		4225A169305694F600A739B8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A168305694F600A739B8 /* main.m */; };
 		4225A16F305694F600A739B8 /* Omnibar Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4225A16E305694F600A739B8 /* Omnibar Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4225A175305694F600A739B8 /* SafariExtensionHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A174305694F600A739B8 /* SafariExtensionHandler.m */; };
-		0000000000000000000000B2 /* AddressPopoverController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* AddressPopoverController.m */; };
-		0000000000000000000000B4 /* OmnibarURLResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A4 /* OmnibarURLResolver.m */; };
-		0000000000000000000000B5 /* Toolbar.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A5 /* Toolbar.pdf */; };
-		0000000000000000000000B7 /* OmnibarSearchSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A7 /* OmnibarSearchSettings.m */; };
-		0000000000000000000000B9 /* SearchSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A9 /* SearchSettingsController.m */; };
-		0000000000000000000000D1 /* PrivacyInfo.xcprivacy in App Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C1 /* PrivacyInfo.xcprivacy */; };
-		0000000000000000000000D2 /* PrivacyInfo.xcprivacy in Extension Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C2 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0000000000000000000000A1 /* AddressPopoverController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AddressPopoverController.h; sourceTree = "<group>"; };
+		0000000000000000000000A2 /* AddressPopoverController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AddressPopoverController.m; sourceTree = "<group>"; };
+		0000000000000000000000A3 /* OmnibarURLResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarURLResolver.h; sourceTree = "<group>"; };
+		0000000000000000000000A4 /* OmnibarURLResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarURLResolver.m; sourceTree = "<group>"; };
+		0000000000000000000000A5 /* Toolbar.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = Toolbar.pdf; sourceTree = "<group>"; };
+		0000000000000000000000A6 /* OmnibarSearchSettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarSearchSettings.h; sourceTree = "<group>"; };
+		0000000000000000000000A7 /* OmnibarSearchSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarSearchSettings.m; sourceTree = "<group>"; };
+		0000000000000000000000A8 /* SearchSettingsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchSettingsController.h; sourceTree = "<group>"; };
+		0000000000000000000000A9 /* SearchSettingsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SearchSettingsController.m; sourceTree = "<group>"; };
+		0000000000000000000000C1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0000000000000000000000C2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0000000000000000000000C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4225A14F305694F500A739B8 /* Omnibar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Omnibar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4225A152305694F500A739B8 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		4225A153305694F500A739B8 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -59,17 +72,6 @@
 		4225A173305694F600A739B8 /* SafariExtensionHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafariExtensionHandler.h; sourceTree = "<group>"; };
 		4225A174305694F600A739B8 /* SafariExtensionHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafariExtensionHandler.m; sourceTree = "<group>"; };
 		4225A176305694F600A739B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		0000000000000000000000A1 /* AddressPopoverController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AddressPopoverController.h; sourceTree = "<group>"; };
-		0000000000000000000000A2 /* AddressPopoverController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AddressPopoverController.m; sourceTree = "<group>"; };
-		0000000000000000000000A3 /* OmnibarURLResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarURLResolver.h; sourceTree = "<group>"; };
-		0000000000000000000000A4 /* OmnibarURLResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarURLResolver.m; sourceTree = "<group>"; };
-		0000000000000000000000A5 /* Toolbar.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = Toolbar.pdf; sourceTree = "<group>"; };
-		0000000000000000000000A6 /* OmnibarSearchSettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarSearchSettings.h; sourceTree = "<group>"; };
-		0000000000000000000000A7 /* OmnibarSearchSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarSearchSettings.m; sourceTree = "<group>"; };
-		0000000000000000000000A8 /* SearchSettingsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchSettingsController.h; sourceTree = "<group>"; };
-		0000000000000000000000A9 /* SearchSettingsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SearchSettingsController.m; sourceTree = "<group>"; };
-		0000000000000000000000C1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		0000000000000000000000C2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,52 +92,60 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-        4225A146305694F500A739B8 = {
-            isa = PBXGroup;
-            children = (4225A151305694F500A739B8, 4225A172305694F600A739B8, 4225A150305694F500A739B8);
-            sourceTree = "<group>";
-        };
-        4225A150305694F500A739B8 /* Products */ = {
-            isa = PBXGroup;
-            children = (4225A14F305694F500A739B8, 4225A16E305694F600A739B8);
-            name = Products;
-            sourceTree = "<group>";
-        };
-        4225A151305694F500A739B8 /* Omnibar */ = {
-            isa = PBXGroup;
-            children = (
-                4225A152305694F500A739B8 /* AppDelegate.h */,
-                4225A153305694F500A739B8 /* AppDelegate.m */,
-                4225A15F305694F500A739B8 /* ViewController.h */,
-                4225A160305694F500A739B8 /* ViewController.m */,
-                4225A165305694F600A739B8 /* Assets.xcassets */,
-                4225A167305694F600A739B8 /* Info.plist */,
-                0000000000000000000000C1 /* PrivacyInfo.xcprivacy */,
-                4225A168305694F600A739B8 /* main.m */,
-            );
-            path = Omnibar;
-            sourceTree = "<group>";
-        };
-        4225A172305694F600A739B8 /* Omnibar Extension */ = {
-            isa = PBXGroup;
-            children = (
-                4225A173305694F600A739B8 /* SafariExtensionHandler.h */,
-                4225A174305694F600A739B8 /* SafariExtensionHandler.m */,
-                0000000000000000000000A1 /* AddressPopoverController.h */,
-                0000000000000000000000A2 /* AddressPopoverController.m */,
-                0000000000000000000000A3 /* OmnibarURLResolver.h */,
-                0000000000000000000000A4 /* OmnibarURLResolver.m */,
-                0000000000000000000000A6 /* OmnibarSearchSettings.h */,
-                0000000000000000000000A7 /* OmnibarSearchSettings.m */,
-                0000000000000000000000A8 /* SearchSettingsController.h */,
-                0000000000000000000000A9 /* SearchSettingsController.m */,
-                0000000000000000000000A5 /* Toolbar.pdf */,
-                4225A176305694F600A739B8 /* Info.plist */,
-                0000000000000000000000C2 /* PrivacyInfo.xcprivacy */,
-            );
-            path = "Omnibar Extension";
-            sourceTree = "<group>";
-        };
+		4225A146305694F500A739B8 = {
+			isa = PBXGroup;
+			children = (
+				4225A151305694F500A739B8 /* Omnibar */,
+				4225A172305694F600A739B8 /* Omnibar Extension */,
+				4225A150305694F500A739B8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4225A150305694F500A739B8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4225A14F305694F500A739B8 /* Omnibar.app */,
+				4225A16E305694F600A739B8 /* Omnibar Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4225A151305694F500A739B8 /* Omnibar */ = {
+			isa = PBXGroup;
+			children = (
+				4225A152305694F500A739B8 /* AppDelegate.h */,
+				4225A153305694F500A739B8 /* AppDelegate.m */,
+				4225A15F305694F500A739B8 /* ViewController.h */,
+				4225A160305694F500A739B8 /* ViewController.m */,
+				4225A165305694F600A739B8 /* Assets.xcassets */,
+				0000000000000000000000C3 /* AppIcon.icon */,
+				4225A167305694F600A739B8 /* Info.plist */,
+				0000000000000000000000C1 /* PrivacyInfo.xcprivacy */,
+				4225A168305694F600A739B8 /* main.m */,
+			);
+			path = Omnibar;
+			sourceTree = "<group>";
+		};
+		4225A172305694F600A739B8 /* Omnibar Extension */ = {
+			isa = PBXGroup;
+			children = (
+				4225A173305694F600A739B8 /* SafariExtensionHandler.h */,
+				4225A174305694F600A739B8 /* SafariExtensionHandler.m */,
+				0000000000000000000000A1 /* AddressPopoverController.h */,
+				0000000000000000000000A2 /* AddressPopoverController.m */,
+				0000000000000000000000A3 /* OmnibarURLResolver.h */,
+				0000000000000000000000A4 /* OmnibarURLResolver.m */,
+				0000000000000000000000A6 /* OmnibarSearchSettings.h */,
+				0000000000000000000000A7 /* OmnibarSearchSettings.m */,
+				0000000000000000000000A8 /* SearchSettingsController.h */,
+				0000000000000000000000A9 /* SearchSettingsController.m */,
+				0000000000000000000000A5 /* Toolbar.pdf */,
+				4225A176305694F600A739B8 /* Info.plist */,
+				0000000000000000000000C2 /* PrivacyInfo.xcprivacy */,
+			);
+			path = "Omnibar Extension";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -222,7 +232,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4225A166305694F600A739B8 /* Assets.xcassets in Resources */,
-				0000000000000000000000D1 /* PrivacyInfo.xcprivacy in App Resources */,
+				0000000000000000000000D3 /* AppIcon.icon in Resources */,
+				0000000000000000000000D1 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,7 +242,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0000000000000000000000B5 /* Toolbar.pdf in Resources */,
-				0000000000000000000000D2 /* PrivacyInfo.xcprivacy in Extension Resources */,
+				0000000000000000000000D2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -269,9 +280,6 @@
 			targetProxy = 4225A170305694F600A739B8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		4225A177305694F600A739B8 /* Debug */ = {
@@ -392,11 +400,11 @@
 		4225A17A305694F600A739B8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 3W55472NF6;
-				CURRENT_PROJECT_VERSION = 6;
-				APPLICATION_EXTENSION_API_ONLY = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -427,11 +435,11 @@
 		4225A17B305694F600A739B8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 3W55472NF6;
-				CURRENT_PROJECT_VERSION = 6;
-				APPLICATION_EXTENSION_API_ONLY = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -466,9 +474,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3W55472NF6;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -499,9 +507,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3W55472NF6;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;

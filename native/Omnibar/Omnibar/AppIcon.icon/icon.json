@@ -1,0 +1,105 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.19000,0.40000,0.86000,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "Search.svg",
+          "name": "Search",
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "dark",
+              "value": "system-light"
+            },
+            {
+              "appearance": "tinted",
+              "value": "system-dark"
+            }
+          ]
+        },
+        {
+          "glass": false,
+          "image-name": "Address.svg",
+          "name": "Address",
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "dark",
+              "value": "system-light"
+            },
+            {
+              "appearance": "tinted",
+              "value": "system-dark"
+            }
+          ]
+        },
+        {
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "dark",
+              "value": "system-light"
+            },
+            {
+              "appearance": "tinted",
+              "value": "system-dark"
+            }
+          ],
+          "glass": false,
+          "image-name": "Go.svg",
+          "name": "Go"
+        }
+      ],
+      "name": "Search and Navigation",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "AddressBar.svg",
+          "name": "Address Pill",
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": "system-light"
+            }
+          ]
+        }
+      ],
+      "name": "Address Bar",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.25
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}
