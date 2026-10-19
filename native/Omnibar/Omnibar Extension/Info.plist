@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>OmnibarSharedGroup</key>
+    <string>$(OMNIBAR_SHARED_GROUP)</string>
+    <key>OmnibarKeychainGroup</key>
+    <string>$(OMNIBAR_KEYCHAIN_GROUP)</string>
+    <key>OmnibarContainingAppIdentifier</key>
+    <string>$(OMNIBAR_APP_BUNDLE_IDENTIFIER)</string>
     <key>NSHumanReadableDescription</key>
     <string>An address and search button for Safari’s toolbar. Keep your tabs in the sidebar.</string>
     <key>NSExtension</key>

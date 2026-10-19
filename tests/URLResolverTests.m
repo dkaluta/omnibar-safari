@@ -12,8 +12,69 @@ static void check(BOOL condition, NSString *message) {
     }
 }
 
+static void TestWebsiteShorthand(void) {
+    NSString *searchTemplate = @"https://example.com/?q=%s";
+    NSArray<NSArray<NSString *> *> *cases = @[
+        @[@".cnn", @".com", @"https://www.cnn.com/"],
+        @[@" .CNN ", @".co.uk", @"https://www.cnn.co.uk/"],
+        @[@".bsky.app", @".co.uk", @"https://www.bsky.app/"],
+        @[@".www.bsky.app", @".com", @"https://www.bsky.app/"],
+        @[@".WWW.CNN.COM", @".co.uk", @"https://www.cnn.com/"],
+        @[@".cnn/news?topic=world%2Fpolitics#latest", @".co.uk", @"https://www.cnn.co.uk/news?topic=world%2Fpolitics#latest"],
+        @[@".cnn/café%2Ftest?q=a%2Bb 中文#frag", @".co.uk", @"https://www.cnn.co.uk/caf%C3%A9%2Ftest?q=a%2Bb%20%E4%B8%AD%E6%96%87#frag"],
+        @[@".bücher.de/café%2Ftest?q=a%2Bb 中文#frag", @".co.uk", @"https://www.xn--bcher-kva.de/caf%C3%A9%2Ftest?q=a%2Bb%20%E4%B8%AD%E6%96%87#frag"],
+        @[@".cnn/a\\b", @".com", @"https://www.cnn.com/a%5Cb"],
+        @[@".cnn/path%zz?q=one%2Ftwo", @".com", @"https://www.cnn.com/path%25zz?q=one%2Ftwo"],
+        @[@".bsky.app:8443/profile?q=hello world#here", @".com", @"https://www.bsky.app:8443/profile?q=hello%20world#here"],
+        @[@".cnn?x=one&y=two#three", @".com", @"https://www.cnn.com/?x=one&y=two#three"],
+        @[@".cnn:0", @".com", @"https://www.cnn.com:0/"],
+        @[@".localhost", @".com", @"https://www.localhost.com/"],
+        @[@".bücher.de", @".com", @"https://www.xn--bcher-kva.de/"]
+    ];
+    for (NSArray<NSString *> *row in cases) {
+        NSError *error = nil;
+        BOOL isSearch = YES;
+        NSURL *URL = [OmnibarURLResolver URLForInput:row[0] searchTemplate:searchTemplate defaultURLSuffix:row[1]
+                                          isSearch:&isSearch error:&error];
+        check([URL.absoluteString isEqual:row[2]] && !isSearch && !error,
+              [NSString stringWithFormat:@"Website shorthand %@ preserves destination: %@", row[0], URL.absoluteString]);
+    }
+    check([[OmnibarURLResolver URLForInput:@".cnn" searchEngine:@"duckduckgo" error:NULL].absoluteString
+           isEqual:@"https://www.cnn.com/"], @"Existing resolver callers use .com for shorthand");
+    for (NSString *input in @[@".", @"..", @"..cnn", @".cnn.", @".cnn..com", @".cnn:65536", @".cnn:abc",
+                              @".cnn:", @".cnn:999999999999999999999999999", @".user:secret@example.com", @".user@example.com",
+                              @".https://example.com", @".cnn news", @".-cnn", @".cnn-", @".cnn%2ecom", @".127.0.0.1", @".[::1]"]) {
+        NSError *error = nil;
+        BOOL isSearch = YES;
+        NSURL *URL = [OmnibarURLResolver URLForInput:input searchTemplate:searchTemplate defaultURLSuffix:@".com"
+                                          isSearch:&isSearch error:&error];
+        check(!URL && !isSearch && error.localizedDescription.length > 0,
+              @"Malformed website shorthand fails without becoming a search");
+        check(![error.localizedDescription containsString:@"secret"], @"Website shorthand errors never echo input credentials");
+    }
+    for (NSArray *row in @[@[@"com", @".com"], @[@" .CO.UK ", @".co.uk"], @[@".xn--p1ai", @".xn--p1ai"],
+                           @[@".example-1", @".example-1"], @[@".1com", @".1com"]]) {
+        NSError *error = nil;
+        check([[OmnibarURLResolver validatedDefaultURLSuffix:row[0] error:&error] isEqual:row[1]] && !error,
+              @"Website suffix accepts multiple DNS labels and canonicalizes spelling");
+    }
+    NSMutableArray *invalidSuffixes = [@[@"", @" ", @".", @"..com", @".co..uk", @".com.", @".-com", @".com-",
+                                        @".co uk", @".co_uk", @"https://com", @".com/path", @".com:443", @".com?x=y",
+                                        @".com#fragment", @"*.com", @".com\nnet", @".123", @".co.123"] mutableCopy];
+    [invalidSuffixes addObject:[@"." stringByAppendingString:[@"a" stringByPaddingToLength:64 withString:@"a" startingAtIndex:0]]];
+    for (NSString *suffix in invalidSuffixes) {
+        NSError *error = nil;
+        check(![OmnibarURLResolver validatedDefaultURLSuffix:suffix error:&error] && error.localizedDescription.length > 0,
+              @"Invalid suffix fails with an explanation");
+    }
+    NSError *error = nil;
+    check(![OmnibarURLResolver URLForInput:@".cnn" searchTemplate:searchTemplate defaultURLSuffix:@"https://evil.example/"
+                                 isSearch:NULL error:&error] && error, @"Invalid resolver suffix cannot redirect a shorthand address");
+}
+
 int main(void) {
     @autoreleasepool {
+        TestWebsiteShorthand();
         NSArray<NSArray<NSString *> *> *addresses = @[
             @[@"https://example.com", @"https://example.com/"],
             @[@" HTTP://example.com/path?q=one#two ", @"http://example.com/path?q=one#two"],

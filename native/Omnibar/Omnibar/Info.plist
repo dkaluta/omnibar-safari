@@ -2,6 +2,23 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>OmnibarSharedGroup</key>
+    <string>$(OMNIBAR_SHARED_GROUP)</string>
+    <key>OmnibarContainingAppIdentifier</key>
+    <string>$(OMNIBAR_APP_BUNDLE_IDENTIFIER)</string>
+    <key>OmnibarKeychainGroup</key>
+    <string>$(OMNIBAR_KEYCHAIN_GROUP)</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLName</key>
+            <string>$(OMNIBAR_APP_BUNDLE_IDENTIFIER).settings</string>
+            <key>CFBundleURLSchemes</key>
+            <array><string>$(OMNIBAR_APP_BUNDLE_IDENTIFIER)</string></array>
+        </dict>
+    </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSApplicationCategoryType</key>

@@ -19,5 +19,6 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" -fobj
   -framework AppKit -framework SafariServices -framework Security -I "$source_dir" \
   "$source_dir/OmnibarURLResolver.m" "$source_dir/AddressPopoverController.m" \
   "$source_dir/OmnibarSearchSettings.m" "$source_dir/SearchSettingsController.m" \
+  "$source_dir/OmnibarBrowserSession.m" "$source_dir/OmnibarPaletteModel.m" \
   "$project_root/tests/PopoverTests.m" -o "$test_bundle/Contents/MacOS/PopoverTests"
 "$test_bundle/Contents/MacOS/PopoverTests" "$output_dir" "$@"

@@ -3,7 +3,7 @@ import SiteLayout from '../layouts/SiteLayout.astro';
 import BrowserIllustration from '../components/BrowserIllustration.astro';
 import { appStoreURL, engines, pageURL, repositoryURL } from '../lib/site';
 ---
-<SiteLayout>
+<SiteLayout description="A free, native Safari address and search popover for Mac. Version 2 is being prepared with a centered keyboard palette for Mac and iPad.">
   <section class="hero wrap">
     <div class="hero-copy">
       <p class="eyebrow"><span></span> A small native Safari extension</p>
@@ -14,6 +14,7 @@ import { appStoreURL, engines, pageURL, repositoryURL } from '../lib/site';
         {repositoryURL && <a class="quiet-link" href={repositoryURL}>View the source <span aria-hidden="true">↗</span></a>}
       </div>
       <p class="compatibility">Free & open source <span>·</span> macOS 13 or later</p>
+      <p class="compatibility">Version 1.2 is available for Mac. <a href="#version-two">Version 2 for Mac and iPad is being prepared.</a></p>
     </div>
     <BrowserIllustration />
   </section>
@@ -41,6 +42,15 @@ import { appStoreURL, engines, pageURL, repositoryURL } from '../lib/site';
       <div><h3>A sensible start for your region.</h3><p>Your Mac’s Region setting sets the initial order, with choices such as Naver in South Korea, Baidu in China, and Seznam in Czechia. Your saved order stays yours.</p></div>
       <div><h3>Add the search you use.</h3><p>Give a custom engine a name and a search URL with <code>%s</code> or <code>{'{searchTerms}'}</code>. Omnibar takes care of encoding your query.</p></div>
       <div><h3>Kagi, including private windows.</h3><p>Optionally save your Kagi private session link in the local macOS Keychain. Omnibar uses it for Kagi searches when Safari confirms Private Browsing.</p></div>
+    </div>
+  </section>
+
+  <section class="feature-section wrap" id="version-two" aria-labelledby="version-two-title">
+    <div class="section-heading"><p class="eyebrow">Version 2 · Being prepared</p><h2 id="version-two-title">A place for tabs.<br />And a few commands.</h2></div>
+    <div class="feature-list">
+      <article><span class="feature-number">01</span><div><h3>The native Mac toolbar.</h3><p>Omnibar keeps its native toolbar popover and adds local tab matching and browser commands alongside addresses and searches. It also works on Safari pages that block the centered palette.</p></div></article>
+      <article><span class="feature-number">02</span><div><h3>A palette at the keyboard.</h3><p>The same Mac app includes Omnibar Commands, enabled separately in Safari. Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> on a webpage for a centered palette. Type <code>@</code> to find a tab or <code>&gt;</code> to find a command. Commands has no toolbar button or popup.</p></div></article>
+      <article><span class="feature-number">03</span><div><h3>Coming to iPad.</h3><p>The iPad version brings the keyboard palette and a settings app to iPadOS 17 or later. A connected hardware keyboard is required to open it with <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd>. The native toolbar popover is a Mac feature.</p><a class="text-link" href={`${pageURL('support')}#version-two`}>Read the version 2 setup guide <span aria-hidden="true">→</span></a></div></article>
     </div>
   </section>
 

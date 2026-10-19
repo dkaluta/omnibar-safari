@@ -8,5 +8,6 @@
 #import <Cocoa/Cocoa.h>
 
 @interface ViewController : NSViewController
-
+- (void)showSearchSettings:(nullable id)sender;
+- (void)closeSearchSettings;
 @end

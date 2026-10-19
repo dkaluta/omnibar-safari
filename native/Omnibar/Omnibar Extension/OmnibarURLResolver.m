@@ -192,6 +192,71 @@
                 searchTemplate:(NSString *)searchTemplate
                       isSearch:(BOOL * _Nullable)isSearch
                          error:(NSError * _Nullable * _Nullable)error {
+    return [self URLForInput:input searchTemplate:searchTemplate defaultURLSuffix:@".com" isSearch:isSearch error:error];
+}
+
++ (nullable NSString *)validatedDefaultURLSuffix:(NSString *)suffix error:(NSError * _Nullable * _Nullable)error {
+    if (error) *error = nil;
+    NSString *value = [suffix isKindOfClass:NSString.class]
+        ? [[suffix stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString] : @"";
+    if ([value hasPrefix:@"."]) value = [value substringFromIndex:1];
+    BOOL valid = value.length > 0 && value.length <= 253;
+    for (NSString *label in [value componentsSeparatedByString:@"."]) {
+        if (label.length == 0 || label.length > 63
+            || ![self string:label matches:@"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"]) valid = NO;
+    }
+    if ([self string:[value componentsSeparatedByString:@"."].lastObject matches:@"^[0-9]+$"]) valid = NO;
+    if (!valid) {
+        [self fail:@"Enter a website suffix such as .com or .co.uk, without a path or spaces. The final part cannot be only numbers." error:error];
+        return nil;
+    }
+    return [@"." stringByAppendingString:value];
+}
+
++ (nullable NSURL *)shorthandURL:(NSString *)value defaultURLSuffix:(NSString *)defaultURLSuffix
+                           error:(NSError * _Nullable * _Nullable)error {
+    NSString *remainder = [value substringFromIndex:1];
+    NSRange separator = [remainder rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"/?#"]];
+    NSString *authority = separator.location == NSNotFound ? remainder : [remainder substringToIndex:separator.location];
+    NSString *tail = separator.location == NSNotFound ? @"" : [remainder substringFromIndex:separator.location];
+    // Dot shorthand is explicitly a website. Do not turn malformed shorthand
+    // into a search, accept credentials, or reinterpret an IP literal as DNS.
+    if (![self string:authority matches:@"^[\\p{L}\\p{N}](?:[\\p{L}\\p{N}.-]*[\\p{L}\\p{N}])?(?::[0-9]+)?$"]) {
+        return [self fail:@"Enter a website after the dot, such as .cnn or .bsky.app." error:error];
+    }
+    NSRange portSeparator = [authority rangeOfString:@":"];
+    NSString *host = (portSeparator.location == NSNotFound ? authority : [authority substringToIndex:portSeparator.location]).lowercaseString;
+    NSString *port = portSeparator.location == NSNotFound ? @"" : [authority substringFromIndex:portSeparator.location];
+    if (![self validHostname:host] || [self string:host matches:@"^[0-9.]+$"]) {
+        return [self fail:@"Enter a valid website name after the dot. Enter IP addresses without a leading dot." error:error];
+    }
+    if (![host containsString:@"."]) {
+        NSString *suffix = [self validatedDefaultURLSuffix:defaultURLSuffix error:error];
+        if (!suffix) return nil;
+        host = [host stringByAppendingString:suffix];
+    }
+    if (![host hasPrefix:@"www."]) host = [@"www." stringByAppendingString:host];
+    // Normalize the hostname separately, then encode raw path/query characters.
+    // Foundation otherwise double-encodes existing escapes when the same URL
+    // also contains Unicode, changing e.g. an escaped slash into literal %2F.
+    NSURLComponents *website = [NSURLComponents new];
+    website.scheme = @"https";
+    website.host = host;
+    NSString *base = website.URL.absoluteString;
+    if (!base) return [self fail:@"Enter a valid website name after the dot." error:error];
+    tail = [tail stringByReplacingOccurrencesOfString:@"%(?![0-9a-fA-F]{2})" withString:@"%25"
+                                             options:NSRegularExpressionSearch range:NSMakeRange(0, tail.length)];
+    NSMutableCharacterSet *URLCharacters = NSCharacterSet.URLFragmentAllowedCharacterSet.mutableCopy;
+    [URLCharacters addCharactersInString:@"%#[]"];
+    tail = [tail stringByAddingPercentEncodingWithAllowedCharacters:URLCharacters];
+    return [self checkedAddress:[NSString stringWithFormat:@"%@%@%@", base, port, tail] inferProtocol:NO error:error];
+}
+
++ (nullable NSURL *)URLForInput:(NSString *)input
+                searchTemplate:(NSString *)searchTemplate
+              defaultURLSuffix:(NSString *)defaultURLSuffix
+                      isSearch:(BOOL * _Nullable)isSearch
+                         error:(NSError * _Nullable * _Nullable)error {
     if (error) *error = nil;
     if (isSearch) *isSearch = NO;
     NSString *value = [[input stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet]
@@ -200,6 +265,7 @@
     if ([value rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location != NSNotFound) {
         return [self fail:@"Remove line breaks or control characters from the address." error:error];
     }
+    if ([value hasPrefix:@"."]) return [self shorthandURL:value defaultURLSuffix:defaultURLSuffix error:error];
     if ([self string:value matches:@"(?i)^https?:"]) {
         return [self checkedAddress:value inferProtocol:NO error:error];
     }

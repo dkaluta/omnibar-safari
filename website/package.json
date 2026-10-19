@@ -14,5 +14,8 @@
   },
   "dependencies": {
     "astro": "7.3.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

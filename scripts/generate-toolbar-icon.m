@@ -1,12 +1,6 @@
 #import <AppKit/AppKit.h>
 
-static void DrawToolbarIcon(NSString *path) {
-    CGRect bounds = CGRectMake(0, 0, 24, 24);
-    CFURLRef url = (__bridge CFURLRef)[NSURL fileURLWithPath:path];
-    CGContextRef pdf = CGPDFContextCreateWithURL(url, &bounds, NULL);
-    CGPDFContextBeginPage(pdf, NULL);
-    [NSGraphicsContext saveGraphicsState];
-    [NSGraphicsContext setCurrentContext:[NSGraphicsContext graphicsContextWithCGContext:pdf flipped:NO]];
+static void DrawToolbarArtwork(void) {
     [NSColor.blackColor setStroke];
     NSBezierPath *pill = [NSBezierPath bezierPathWithRoundedRect:NSMakeRect(1, 5, 22, 14) xRadius:4 yRadius:4];
     pill.lineWidth = 1.7;
@@ -22,6 +16,16 @@ static void DrawToolbarIcon(NSString *path) {
     details.lineWidth = 1.4;
     details.lineCapStyle = NSLineCapStyleRound;
     [details stroke];
+}
+
+static void DrawToolbarIcon(NSString *path) {
+    CGRect bounds = CGRectMake(0, 0, 24, 24);
+    CFURLRef url = (__bridge CFURLRef)[NSURL fileURLWithPath:path];
+    CGContextRef pdf = CGPDFContextCreateWithURL(url, &bounds, NULL);
+    CGPDFContextBeginPage(pdf, NULL);
+    [NSGraphicsContext saveGraphicsState];
+    [NSGraphicsContext setCurrentContext:[NSGraphicsContext graphicsContextWithCGContext:pdf flipped:NO]];
+    DrawToolbarArtwork();
     [NSGraphicsContext restoreGraphicsState];
     CGPDFContextEndPage(pdf);
     CGPDFContextClose(pdf);

@@ -1,0 +1,26 @@
+{
+  "fill": { "automatic-gradient": "srgb:0.19000,0.40000,0.86000,1.00000" },
+  "groups": [
+    {
+      "name": "Command and Results",
+      "layers": [
+        { "name": "Command Prompt", "image-name": "Prompt.svg", "glass": false,
+          "fill-specializations": [{ "value": "none" }, { "appearance": "dark", "value": "system-light" }, { "appearance": "tinted", "value": "system-dark" }] },
+        { "name": "Result Rows", "image-name": "Results.svg", "glass": false,
+          "fill-specializations": [{ "value": "none" }, { "appearance": "dark", "value": "system-light" }, { "appearance": "tinted", "value": "system-dark" }] }
+      ],
+      "shadow": { "kind": "neutral", "opacity": 0 },
+      "translucency": { "enabled": false, "value": 0 }
+    },
+    {
+      "name": "Centered Palette",
+      "layers": [
+        { "name": "Palette Surface", "image-name": "Palette.svg",
+          "fill-specializations": [{ "value": "automatic" }, { "appearance": "tinted", "value": "system-light" }] }
+      ],
+      "shadow": { "kind": "neutral", "opacity": 0.35 },
+      "translucency": { "enabled": true, "value": 0.25 }
+    }
+  ],
+  "supported-platforms": { "squares": ["macOS"] }
+}

@@ -12,6 +12,8 @@
 		0000000000000000000000B5 /* Toolbar.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A5 /* Toolbar.pdf */; };
 		0000000000000000000000B7 /* OmnibarSearchSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A7 /* OmnibarSearchSettings.m */; };
 		0000000000000000000000B9 /* SearchSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A9 /* SearchSettingsController.m */; };
+		200000000000000000000003 /* OmnibarBrowserSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* OmnibarBrowserSession.m */; };
+		200000000000000000000006 /* OmnibarPaletteModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* OmnibarPaletteModel.m */; };
 		0000000000000000000000D1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C1 /* PrivacyInfo.xcprivacy */; };
 		0000000000000000000000D2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C2 /* PrivacyInfo.xcprivacy */; };
 		0000000000000000000000D3 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C3 /* AppIcon.icon */; };
@@ -21,6 +23,32 @@
 		4225A169305694F600A739B8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A168305694F600A739B8 /* main.m */; };
 		4225A16F305694F600A739B8 /* Omnibar Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4225A16E305694F600A739B8 /* Omnibar Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4225A175305694F600A739B8 /* SafariExtensionHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 4225A174305694F600A739B8 /* SafariExtensionHandler.m */; };
+		10000000000000000000001E /* Omnibar Commands.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 100000000000000000000001 /* Omnibar Commands.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		10000000000000000000001F /* SafariWebExtensionHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000003 /* SafariWebExtensionHandler.m */; };
+		100000000000000000000020 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000005 /* PrivacyInfo.xcprivacy */; };
+		100000000000000000000028 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000A /* manifest.json */; };
+		100000000000000000000029 /* palette.html in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000B /* palette.html */; };
+		10000000000000000000002A /* palette.css in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000C /* palette.css */; };
+		10000000000000000000002B /* palette-entry.js in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000D /* palette-entry.js */; };
+		10000000000000000000002C /* palette-core.js in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000E /* palette-core.js */; };
+		10000000000000000000002D /* overlay-ui.js in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000F /* overlay-ui.js */; };
+		100000000000000000000021 /* OmnibarURLResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A4 /* OmnibarURLResolver.m */; };
+		100000000000000000000022 /* OmnibarSearchSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A7 /* OmnibarSearchSettings.m */; };
+		10000000000000000000002E /* icon48.png in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000010 /* icon48.png */; };
+		10000000000000000000002F /* icon128.png in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000011 /* icon128.png */; };
+		1000000000000000000000D2 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000C8 /* content.js */; };
+		1000000000000000000000D3 /* background.html in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000C9 /* background.html */; };
+		1000000000000000000000D4 /* background.mjs in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000CA /* background.mjs */; };
+		1000000000000000000000D5 /* browser-actions.js in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000CB /* browser-actions.js */; };
+		1000000000000000000000D6 /* unavailable.html in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000CC /* unavailable.html */; };
+		1000000000000000000000D7 /* unavailable.css in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000CD /* unavailable.css */; };
+		1000000000000000000000D8 /* background-start.js in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000D0 /* background-start.js */; };
+		1000000000000000000000D9 /* unavailable.js in Resources */ = {isa = PBXBuildFile; fileRef = 1000000000000000000000D1 /* unavailable.js */; };
+		300000000000000000000003 /* SearchSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A9 /* SearchSettingsController.m */; };
+		300000000000000000000004 /* OmnibarSearchSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A7 /* OmnibarSearchSettings.m */; };
+		300000000000000000000005 /* OmnibarURLResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A4 /* OmnibarURLResolver.m */; };
+		400000000000000000000011 /* palette-bundle.js in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000001 /* palette-bundle.js */; };
+		400000000000000000000012 /* background-bundle.js in Resources */ = {isa = PBXBuildFile; fileRef = 400000000000000000000002 /* background-bundle.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,6 +58,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4225A16D305694F600A739B8;
 			remoteInfo = "Omnibar Extension";
+		};
+		10000000000000000000003C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4225A147305694F500A739B8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 100000000000000000000046;
+			remoteInfo = "Omnibar Commands";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -41,6 +76,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				4225A16F305694F600A739B8 /* Omnibar Extension.appex in Embed Foundation Extensions */,
+				10000000000000000000001E /* Omnibar Commands.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -57,6 +93,10 @@
 		0000000000000000000000A7 /* OmnibarSearchSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarSearchSettings.m; sourceTree = "<group>"; };
 		0000000000000000000000A8 /* SearchSettingsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchSettingsController.h; sourceTree = "<group>"; };
 		0000000000000000000000A9 /* SearchSettingsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SearchSettingsController.m; sourceTree = "<group>"; };
+		200000000000000000000001 /* OmnibarBrowserSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarBrowserSession.h; sourceTree = "<group>"; };
+		200000000000000000000002 /* OmnibarBrowserSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarBrowserSession.m; sourceTree = "<group>"; };
+		200000000000000000000004 /* OmnibarPaletteModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OmnibarPaletteModel.h; sourceTree = "<group>"; };
+		200000000000000000000005 /* OmnibarPaletteModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OmnibarPaletteModel.m; sourceTree = "<group>"; };
 		0000000000000000000000C1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0000000000000000000000C2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0000000000000000000000C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
@@ -72,6 +112,34 @@
 		4225A173305694F600A739B8 /* SafariExtensionHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafariExtensionHandler.h; sourceTree = "<group>"; };
 		4225A174305694F600A739B8 /* SafariExtensionHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafariExtensionHandler.m; sourceTree = "<group>"; };
 		4225A176305694F600A739B8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		100000000000000000000001 /* Omnibar Commands.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Omnibar Commands.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000002 /* SafariWebExtensionHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SafariWebExtensionHandler.h"; sourceTree = "<group>"; };
+		100000000000000000000003 /* SafariWebExtensionHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "SafariWebExtensionHandler.m"; sourceTree = "<group>"; };
+		100000000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
+		100000000000000000000005 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		100000000000000000000006 /* Omnibar Commands.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Omnibar Commands.entitlements"; sourceTree = "<group>"; };
+		100000000000000000000007 /* Omnibar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Omnibar.entitlements"; sourceTree = "<group>"; };
+		100000000000000000000008 /* Omnibar Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Omnibar Extension.entitlements"; sourceTree = "<group>"; };
+		10000000000000000000000A /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "manifest.json"; sourceTree = "<group>"; };
+		10000000000000000000000B /* palette.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "palette.html"; sourceTree = "<group>"; };
+		10000000000000000000000C /* palette.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "palette.css"; sourceTree = "<group>"; };
+		10000000000000000000000D /* palette-entry.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "palette-entry.js"; sourceTree = "<group>"; };
+		10000000000000000000000E /* palette-core.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "palette-core.js"; sourceTree = "<group>"; };
+		10000000000000000000000F /* overlay-ui.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "overlay-ui.js"; sourceTree = "<group>"; };
+		100000000000000000000010 /* icon48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon48.png"; sourceTree = "<group>"; };
+		100000000000000000000011 /* icon128.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon128.png"; sourceTree = "<group>"; };
+		1000000000000000000000C8 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "content.js"; sourceTree = "<group>"; };
+		1000000000000000000000C9 /* background.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "background.html"; sourceTree = "<group>"; };
+		1000000000000000000000CA /* background.mjs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "background.mjs"; sourceTree = "<group>"; };
+		1000000000000000000000CB /* browser-actions.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "browser-actions.js"; sourceTree = "<group>"; };
+		1000000000000000000000CC /* unavailable.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "unavailable.html"; sourceTree = "<group>"; };
+		1000000000000000000000CD /* unavailable.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "unavailable.css"; sourceTree = "<group>"; };
+		1000000000000000000000CE /* OmnibarPalettePreferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "OmnibarPalettePreferences.h"; sourceTree = "<group>"; };
+		1000000000000000000000CF /* PaletteIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "PaletteIcon.icon"; sourceTree = "<group>"; };
+		1000000000000000000000D0 /* background-start.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "background-start.js"; sourceTree = "<group>"; };
+		1000000000000000000000D1 /* unavailable.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "unavailable.js"; sourceTree = "<group>"; };
+		400000000000000000000001 /* palette-bundle.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "palette-bundle.js"; sourceTree = "<group>"; };
+		400000000000000000000002 /* background-bundle.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "background-bundle.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +157,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		10000000000000000000003E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -97,6 +171,7 @@
 			children = (
 				4225A151305694F500A739B8 /* Omnibar */,
 				4225A172305694F600A739B8 /* Omnibar Extension */,
+				100000000000000000000032 /* Omnibar Commands */,
 				4225A150305694F500A739B8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,6 +181,7 @@
 			children = (
 				4225A14F305694F500A739B8 /* Omnibar.app */,
 				4225A16E305694F600A739B8 /* Omnibar Extension.appex */,
+				100000000000000000000001 /* Omnibar Commands.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -120,6 +196,7 @@
 				4225A165305694F600A739B8 /* Assets.xcassets */,
 				0000000000000000000000C3 /* AppIcon.icon */,
 				4225A167305694F600A739B8 /* Info.plist */,
+				100000000000000000000007 /* Omnibar.entitlements */,
 				0000000000000000000000C1 /* PrivacyInfo.xcprivacy */,
 				4225A168305694F600A739B8 /* main.m */,
 			);
@@ -133,17 +210,62 @@
 				4225A174305694F600A739B8 /* SafariExtensionHandler.m */,
 				0000000000000000000000A1 /* AddressPopoverController.h */,
 				0000000000000000000000A2 /* AddressPopoverController.m */,
+				200000000000000000000001 /* OmnibarBrowserSession.h */,
+				200000000000000000000002 /* OmnibarBrowserSession.m */,
+				200000000000000000000004 /* OmnibarPaletteModel.h */,
+				200000000000000000000005 /* OmnibarPaletteModel.m */,
 				0000000000000000000000A3 /* OmnibarURLResolver.h */,
 				0000000000000000000000A4 /* OmnibarURLResolver.m */,
+				1000000000000000000000CE /* OmnibarPalettePreferences.h */,
 				0000000000000000000000A6 /* OmnibarSearchSettings.h */,
 				0000000000000000000000A7 /* OmnibarSearchSettings.m */,
 				0000000000000000000000A8 /* SearchSettingsController.h */,
 				0000000000000000000000A9 /* SearchSettingsController.m */,
 				0000000000000000000000A5 /* Toolbar.pdf */,
 				4225A176305694F600A739B8 /* Info.plist */,
+				100000000000000000000008 /* Omnibar Extension.entitlements */,
 				0000000000000000000000C2 /* PrivacyInfo.xcprivacy */,
 			);
 			path = "Omnibar Extension";
+			sourceTree = "<group>";
+		};
+		100000000000000000000032 /* Omnibar Commands */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000002 /* SafariWebExtensionHandler.h */,
+				100000000000000000000003 /* SafariWebExtensionHandler.m */,
+				1000000000000000000000CF /* PaletteIcon.icon */,
+				100000000000000000000004 /* Info.plist */,
+				100000000000000000000005 /* PrivacyInfo.xcprivacy */,
+				100000000000000000000006 /* Omnibar Commands.entitlements */,
+				100000000000000000000033 /* Resources */,
+			);
+			path = "Omnibar Commands";
+			sourceTree = "<group>";
+		};
+		100000000000000000000033 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				10000000000000000000000A /* manifest.json */,
+				10000000000000000000000B /* palette.html */,
+				10000000000000000000000C /* palette.css */,
+				400000000000000000000001 /* palette-bundle.js */,
+				400000000000000000000002 /* background-bundle.js */,
+				10000000000000000000000D /* palette-entry.js */,
+				10000000000000000000000E /* palette-core.js */,
+				100000000000000000000010 /* icon48.png */,
+				100000000000000000000011 /* icon128.png */,
+				1000000000000000000000C8 /* content.js */,
+				1000000000000000000000C9 /* background.html */,
+				1000000000000000000000D0 /* background-start.js */,
+				1000000000000000000000CA /* background.mjs */,
+				1000000000000000000000CB /* browser-actions.js */,
+				1000000000000000000000CD /* unavailable.css */,
+				1000000000000000000000D1 /* unavailable.js */,
+				1000000000000000000000CC /* unavailable.html */,
+				10000000000000000000000F /* overlay-ui.js */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -162,6 +284,7 @@
 			);
 			dependencies = (
 				4225A171305694F600A739B8 /* PBXTargetDependency */,
+				10000000000000000000003D /* PBXTargetDependency */,
 			);
 			name = Omnibar;
 			packageProductDependencies = (
@@ -189,6 +312,22 @@
 			productReference = 4225A16E305694F600A739B8 /* Omnibar Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		100000000000000000000046 /* Omnibar Commands */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000050 /* Build configuration list for PBXNativeTarget "Omnibar Commands" */;
+			buildPhases = (
+				10000000000000000000003F /* Sources */,
+				10000000000000000000003E /* Frameworks */,
+				100000000000000000000040 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = "Omnibar Commands";
+			packageProductDependencies = ();
+			productName = "Omnibar Commands";
+			productReference = 100000000000000000000001 /* Omnibar Commands.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -202,6 +341,9 @@
 						CreatedOnToolsVersion = 26.6;
 					};
 					4225A16D305694F600A739B8 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					100000000000000000000046 = {
 						CreatedOnToolsVersion = 26.6;
 					};
 				};
@@ -222,6 +364,7 @@
 			targets = (
 				4225A14E305694F500A739B8 /* Omnibar */,
 				4225A16D305694F600A739B8 /* Omnibar Extension */,
+				100000000000000000000046 /* Omnibar Commands */,
 			);
 		};
 /* End PBXProject section */
@@ -246,6 +389,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		100000000000000000000040 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000020 /* PrivacyInfo.xcprivacy in Resources */,
+				100000000000000000000028 /* manifest.json in Resources */,
+				100000000000000000000029 /* palette.html in Resources */,
+				10000000000000000000002A /* palette.css in Resources */,
+				400000000000000000000011 /* palette-bundle.js in Resources */,
+				400000000000000000000012 /* background-bundle.js in Resources */,
+				10000000000000000000002B /* palette-entry.js in Resources */,
+				10000000000000000000002C /* palette-core.js in Resources */,
+				10000000000000000000002E /* icon48.png in Resources */,
+				10000000000000000000002F /* icon128.png in Resources */,
+				1000000000000000000000D2 /* content.js in Resources */,
+				1000000000000000000000D3 /* background.html in Resources */,
+				1000000000000000000000D8 /* background-start.js in Resources */,
+				1000000000000000000000D4 /* background.mjs in Resources */,
+				1000000000000000000000D5 /* browser-actions.js in Resources */,
+				1000000000000000000000D7 /* unavailable.css in Resources */,
+				1000000000000000000000D9 /* unavailable.js in Resources */,
+				1000000000000000000000D6 /* unavailable.html in Resources */,
+				10000000000000000000002D /* overlay-ui.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -256,6 +425,9 @@
 				4225A161305694F500A739B8 /* ViewController.m in Sources */,
 				4225A169305694F600A739B8 /* main.m in Sources */,
 				4225A154305694F500A739B8 /* AppDelegate.m in Sources */,
+				300000000000000000000003 /* SearchSettingsController.m in Sources */,
+				300000000000000000000004 /* OmnibarSearchSettings.m in Sources */,
+				300000000000000000000005 /* OmnibarURLResolver.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,6 +440,18 @@
 				0000000000000000000000B4 /* OmnibarURLResolver.m in Sources */,
 				0000000000000000000000B7 /* OmnibarSearchSettings.m in Sources */,
 				0000000000000000000000B9 /* SearchSettingsController.m in Sources */,
+				200000000000000000000003 /* OmnibarBrowserSession.m in Sources */,
+				200000000000000000000006 /* OmnibarPaletteModel.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10000000000000000000003F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10000000000000000000001F /* SafariWebExtensionHandler.m in Sources */,
+				100000000000000000000021 /* OmnibarURLResolver.m in Sources */,
+				100000000000000000000022 /* OmnibarSearchSettings.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -278,6 +462,11 @@
 			isa = PBXTargetDependency;
 			target = 4225A16D305694F600A739B8 /* Omnibar Extension */;
 			targetProxy = 4225A170305694F600A739B8 /* PBXContainerItemProxy */;
+		};
+		10000000000000000000003D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 100000000000000000000046 /* Omnibar Commands */;
+			targetProxy = 10000000000000000000003C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -339,6 +528,10 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OMNIBAR_APP_BUNDLE_IDENTIFIER = com.dkaluta.omnibar.development;
+				OMNIBAR_SHARED_GROUP = "group.$(OMNIBAR_APP_BUNDLE_IDENTIFIER)";
+				OMNIBAR_KEYCHAIN_GROUP = "$(AppIdentifierPrefix)$(OMNIBAR_APP_BUNDLE_IDENTIFIER).shared";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -393,6 +586,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OMNIBAR_APP_BUNDLE_IDENTIFIER = com.dkaluta.omnibar;
+				OMNIBAR_SHARED_GROUP = "group.$(OMNIBAR_APP_BUNDLE_IDENTIFIER)";
+				OMNIBAR_KEYCHAIN_GROUP = "$(AppIdentifierPrefix)$(OMNIBAR_APP_BUNDLE_IDENTIFIER).shared";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -403,11 +600,12 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = "Omnibar Extension/Omnibar Extension.entitlements";
 				INFOPLIST_FILE = "Omnibar Extension/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Omnibar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -417,14 +615,14 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 					"-framework",
 					Security,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dkaluta.omnibar.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER).Extension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -438,11 +636,12 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = "Omnibar Extension/Omnibar Extension.entitlements";
 				INFOPLIST_FILE = "Omnibar Extension/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Omnibar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -452,14 +651,14 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 					"-framework",
 					Security,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dkaluta.omnibar.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER).Extension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -475,12 +674,14 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = Omnibar/Omnibar.entitlements;
 				INFOPLIST_FILE = Omnibar/Info.plist;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Omnibar Extension", );
 				INFOPLIST_KEY_CFBundleDisplayName = Omnibar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -488,12 +689,16 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
+					"-framework",
+					Security,
+					"-framework",
+					AppKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dkaluta.omnibar;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -508,12 +713,14 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 3W55472NF6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = Omnibar/Omnibar.entitlements;
 				INFOPLIST_FILE = Omnibar/Info.plist;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Omnibar Extension", );
 				INFOPLIST_KEY_CFBundleDisplayName = Omnibar;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -521,13 +728,95 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
+					"-framework",
+					Security,
+					"-framework",
+					AppKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dkaluta.omnibar;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		100000000000000000000051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 11;
+				DEVELOPMENT_TEAM = 3W55472NF6;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Omnibar Extension", );
+				CODE_SIGN_ENTITLEMENTS = "Omnibar Commands/Omnibar Commands.entitlements";
+				INFOPLIST_FILE = "Omnibar Commands/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Omnibar Commands";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 2.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					Security,
+					"-framework",
+					AppKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER).Commands";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		100000000000000000000052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 11;
+				DEVELOPMENT_TEAM = 3W55472NF6;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Omnibar Extension", );
+				CODE_SIGN_ENTITLEMENTS = "Omnibar Commands/Omnibar Commands.entitlements";
+				INFOPLIST_FILE = "Omnibar Commands/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Omnibar Commands";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 2.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					Security,
+					"-framework",
+					AppKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(OMNIBAR_APP_BUNDLE_IDENTIFIER).Commands";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
@@ -559,6 +848,15 @@
 			buildConfigurations = (
 				4225A17E305694F600A739B8 /* Debug */,
 				4225A17F305694F600A739B8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		100000000000000000000050 /* Build configuration list for PBXNativeTarget "Omnibar Commands" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				100000000000000000000051 /* Debug */,
+				100000000000000000000052 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -11,6 +11,8 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" -fobj
   "$project_root/native/Omnibar/Omnibar Extension/AddressPopoverController.m" \
   "$project_root/native/Omnibar/Omnibar Extension/OmnibarSearchSettings.m" \
   "$project_root/native/Omnibar/Omnibar Extension/SearchSettingsController.m" \
+  "$project_root/native/Omnibar/Omnibar Extension/OmnibarBrowserSession.m" \
+  "$project_root/native/Omnibar/Omnibar Extension/OmnibarPaletteModel.m" \
   "$project_root/tests/KeyboardTests.m" \
   -o "$test_directory/KeyboardTests"
 "$test_directory/KeyboardTests"

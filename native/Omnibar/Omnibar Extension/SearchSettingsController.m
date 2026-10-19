@@ -16,6 +16,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 @property (nonatomic, strong) NSSegmentedControl *paneControl;
 @property (nonatomic, strong) NSView *contentHost;
 @property (nonatomic, strong) NSView *enginesPane;
+@property (nonatomic, strong) NSView *websitesPane;
 @property (nonatomic, strong) NSView *privatePane;
 @property (nonatomic, strong) NSView *editorPane;
 @property (nonatomic, strong) NSLayoutConstraint *paneTopConstraint;
@@ -24,6 +25,10 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 @property (nonatomic, strong) NSButton *savePrivateButton;
 @property (nonatomic, strong) NSButton *removePrivateButton;
 @property (nonatomic, strong) NSTextField *privateStatus;
+@property (nonatomic, strong) NSTextField *suffixField;
+@property (nonatomic, strong) NSTextField *suffixExample;
+@property (nonatomic, strong) NSTextField *suffixStatus;
+@property (nonatomic, strong) NSButton *saveSuffixButton;
 @property (nonatomic, strong) NSTableView *engineTable;
 @property (nonatomic, strong) NSTextField *nameField;
 @property (nonatomic, strong) NSTextField *templateField;
@@ -107,7 +112,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     self.doneButton = [self button:@"Done" action:@selector(done:)];
     self.doneButton.keyEquivalent = @"\033";
     self.doneButton.keyEquivalentModifierMask = 0;
-    self.paneControl = [NSSegmentedControl segmentedControlWithLabels:@[@"Search Engines", @"Kagi Private Browsing"]
+    self.paneControl = [NSSegmentedControl segmentedControlWithLabels:@[@"Search Engines", @"Websites", @"Kagi Private Browsing"]
         trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(changePane:)];
     self.paneControl.translatesAutoresizingMaskIntoConstraints = NO;
     self.paneControl.segmentStyle = NSSegmentStyleRounded;
@@ -128,7 +133,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
         [self.doneButton.heightAnchor constraintEqualToConstant:28],
         [self.paneControl.topAnchor constraintEqualToAnchor:self.doneButton.bottomAnchor constant:18],
         [self.paneControl.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [self.paneControl.widthAnchor constraintEqualToConstant:360],
+        [self.paneControl.widthAnchor constraintEqualToConstant:460],
         [self.paneControl.heightAnchor constraintEqualToConstant:28],
         [self.contentHost.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:20],
         [self.contentHost.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-20],
@@ -136,12 +141,14 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
         self.paneTopConstraint,
     ]];
     self.enginesPane = [self pane];
+    self.websitesPane = [self pane];
     self.privatePane = [self pane];
     self.editorPane = [self pane];
     [self buildEnginesPane];
+    [self buildWebsitesPane];
     [self buildPrivatePane];
     [self buildEditorPane];
-    self.privatePane.hidden = YES;
+    self.websitesPane.hidden = self.privatePane.hidden = YES;
     self.editorPane.hidden = YES;
     [self reloadEnginesSelecting:self.settings.selectedEngineID];
     [self updatePrivateControls];
@@ -231,6 +238,64 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
             [button.heightAnchor constraintEqualToAnchor:add.heightAnchor],
         ]];
     }
+}
+
+- (void)buildWebsitesPane {
+    NSView *pane = self.websitesPane;
+    NSTextField *note = [self label:@"Start an address with a dot to add https://www. automatically. When you leave out the website’s suffix, Omnibar adds the default below." size:13 weight:NSFontWeightRegular secondary:YES];
+    NSTextField *label = [self label:@"Default website suffix" size:13 weight:NSFontWeightMedium secondary:NO];
+    self.suffixField = [self entry:@".com"];
+    self.suffixField.stringValue = self.settings.defaultURLSuffix;
+    self.suffixField.accessibilityLabel = @"Default website suffix";
+    self.suffixField.accessibilityHelp = @"Enter a suffix such as .com or .co.uk. This is used only for dot shorthand without a supplied suffix. Press Return or choose Save Suffix to save.";
+    self.suffixField.target = self;
+    self.suffixField.action = @selector(saveSuffix:);
+    self.suffixField.cell.sendsActionOnEndEditing = NO;
+    self.saveSuffixButton = [self button:@"Save Suffix" action:@selector(saveSuffix:)];
+    NSTextField *hint = [self label:@"For example: .com or .co.uk" size:13 weight:NSFontWeightRegular secondary:YES];
+    self.suffixExample = [self label:@"" size:13 weight:NSFontWeightRegular secondary:YES];
+    self.suffixStatus = [self label:@"" size:13 weight:NSFontWeightRegular secondary:YES];
+    [self updateSuffixExample];
+    for (NSView *view in @[note, label, self.suffixField, self.saveSuffixButton, hint, self.suffixExample, self.suffixStatus]) [pane addSubview:view];
+    [NSLayoutConstraint activateConstraints:@[
+        [note.topAnchor constraintEqualToAnchor:pane.topAnchor],
+        [note.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [note.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
+        [label.topAnchor constraintEqualToAnchor:note.bottomAnchor constant:20],
+        [label.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [self.suffixField.topAnchor constraintEqualToAnchor:label.bottomAnchor constant:8],
+        [self.suffixField.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [self.suffixField.widthAnchor constraintEqualToConstant:180],
+        [self.suffixField.heightAnchor constraintEqualToConstant:28],
+        [self.saveSuffixButton.leadingAnchor constraintEqualToAnchor:self.suffixField.trailingAnchor constant:8],
+        [self.saveSuffixButton.centerYAnchor constraintEqualToAnchor:self.suffixField.centerYAnchor],
+        [self.saveSuffixButton.heightAnchor constraintEqualToConstant:28],
+        [hint.topAnchor constraintEqualToAnchor:self.suffixField.bottomAnchor constant:8],
+        [hint.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [hint.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
+        [self.suffixExample.topAnchor constraintEqualToAnchor:hint.bottomAnchor constant:20],
+        [self.suffixExample.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [self.suffixExample.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
+        [self.suffixStatus.topAnchor constraintEqualToAnchor:self.suffixExample.bottomAnchor constant:16],
+        [self.suffixStatus.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor],
+        [self.suffixStatus.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor],
+        [self.suffixStatus.bottomAnchor constraintLessThanOrEqualToAnchor:pane.bottomAnchor],
+    ]];
+}
+
+- (void)updateSuffixExample {
+    self.suffixExample.stringValue = [NSString stringWithFormat:@"With %@, .cnn opens https://www.cnn%@.\nA supplied suffix is kept: .bsky.app opens https://www.bsky.app.", self.settings.defaultURLSuffix, self.settings.defaultURLSuffix];
+}
+
+- (void)saveSuffix:(id)sender {
+    NSError *error = nil;
+    if (![self.settings setDefaultURLSuffix:self.suffixField.stringValue error:&error]) {
+        [self status:self.suffixStatus message:error.localizedDescription ?: @"Enter a website suffix such as .com or .co.uk." error:YES announce:YES];
+        return;
+    }
+    self.suffixField.stringValue = self.settings.defaultURLSuffix;
+    [self updateSuffixExample];
+    [self status:self.suffixStatus message:@"Website suffix saved" error:NO announce:YES];
 }
 
 - (void)buildPrivatePane {
@@ -332,7 +397,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)viewWillAppear {
     [super viewWillAppear];
-    if (self.hasKagiEngine && self.paneControl.selectedSegment == 1 && !self.keychainBusy) [self refreshPrivateStatus];
+    if (self.hasKagiEngine && self.paneControl.selectedSegment == 2 && !self.keychainBusy) [self refreshPrivateStatus];
 }
 
 - (void)viewDidLayout {
@@ -361,14 +426,22 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)updatePaneVisibility {
     BOOL hasKagi = self.hasKagiEngine;
+    if (!hasKagi && self.paneControl.selectedSegment == 2) self.paneControl.selectedSegment = 0;
     if (!hasKagi) {
-        self.paneControl.selectedSegment = 0;
         [self resetSensitiveFields];
     }
-    BOOL showTabs = hasKagi && !self.editingEngine;
-    BOOL showPrivate = showTabs && self.paneControl.selectedSegment == 1;
+    NSInteger selectedSegment = self.paneControl.selectedSegment;
+    if (self.paneControl.segmentCount != (hasKagi ? 3 : 2)) self.paneControl.segmentCount = hasKagi ? 3 : 2;
+    self.paneControl.selectedSegment = selectedSegment;
+    [self.paneControl setLabel:@"Search Engines" forSegment:0];
+    [self.paneControl setLabel:@"Websites" forSegment:1];
+    if (hasKagi) [self.paneControl setLabel:@"Kagi Private Browsing" forSegment:2];
+    BOOL showTabs = !self.editingEngine;
+    BOOL showWebsites = showTabs && self.paneControl.selectedSegment == 1;
+    BOOL showPrivate = showTabs && hasKagi && self.paneControl.selectedSegment == 2;
     self.paneControl.hidden = !showTabs;
-    self.enginesPane.hidden = self.editingEngine || showPrivate;
+    self.enginesPane.hidden = self.editingEngine || showPrivate || showWebsites;
+    self.websitesPane.hidden = !showWebsites;
     self.privatePane.hidden = !showPrivate;
     self.editorPane.hidden = !self.editingEngine;
     // Without a section selector, place content directly below the heading.
@@ -726,6 +799,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
 
 - (void)controlTextDidChange:(NSNotification *)notification {
     if (notification.object == self.privateLinkField) [self updatePrivateControls];
+    else if (notification.object == self.suffixField) [self status:self.suffixStatus message:@"" error:NO announce:NO];
     else [self status:self.engineStatus message:@"" error:NO announce:NO];
 }
 
@@ -748,6 +822,7 @@ static NSPasteboardType const OmnibarEnginePasteboardType = @"com.omnibar.search
     }
     if (selector == @selector(insertNewline:)) {
         if (control == self.privateLinkField) [self savePrivateLink:control];
+        else if (control == self.suffixField) [self saveSuffix:control];
         else if (self.editingEngine) [self saveEngine:control];
         return YES;
     }

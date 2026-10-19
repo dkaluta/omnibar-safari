@@ -1,10 +1,21 @@
 #import "ViewController.h"
+#import "OmnibarSettingsRouteDiagnostics.h"
+#import "../Omnibar Extension/OmnibarPalettePreferences.h"
+#import "../Omnibar Extension/OmnibarSearchSettings.h"
+#import "../Omnibar Extension/SearchSettingsController.h"
 #import <SafariServices/SafariServices.h>
 
-static NSString * const OmnibarExtensionIdentifier = @"com.dkaluta.omnibar.Extension";
+static NSString *OmnibarExtensionIdentifier(NSString *suffix) {
+    return [NSBundle.mainBundle.bundleIdentifier stringByAppendingString:suffix];
+}
 
 @interface ViewController ()
 @property (strong) NSTextField *statusLabel;
+@property (strong) NSTextField *commandsStatusLabel;
+@property (strong) NSButton *paletteTipsButton;
+@property (strong) NSView *setupContent;
+@property (strong) NSTextField *migrationLabel;
+@property (strong) SearchSettingsController *settingsController;
 @end
 
 @implementation ViewController
@@ -18,53 +29,96 @@ static NSString * const OmnibarExtensionIdentifier = @"com.dkaluta.omnibar.Exten
     return label;
 }
 
+- (NSStackView *)extensionSectionWithTitle:(NSString *)name
+                             description:(NSString *)description
+                                  status:(NSTextField *)status
+                                  action:(SEL)action
+                         secondaryButton:(NSButton *)secondaryButton {
+    NSTextField *title = [self label:name
+        font:[NSFont systemFontOfSize:15 weight:NSFontWeightSemibold] color:NSColor.labelColor];
+    NSTextField *detail = [self label:description
+        font:[NSFont systemFontOfSize:12 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
+    NSButton *settings = [NSButton buttonWithTitle:[NSString stringWithFormat:@"Set Up %@…", name]
+        target:self action:action];
+    settings.bezelStyle = NSBezelStyleRounded;
+    NSView *actions = settings;
+    if (secondaryButton) {
+        NSStackView *buttons = [NSStackView stackViewWithViews:@[settings, secondaryButton]];
+        buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+        buttons.spacing = 8;
+        actions = buttons;
+    }
+    NSStackView *section = [NSStackView stackViewWithViews:@[title, detail, status, actions]];
+    section.orientation = NSUserInterfaceLayoutOrientationVertical;
+    section.alignment = NSLayoutAttributeCenterX;
+    section.spacing = 5;
+    section.translatesAutoresizingMaskIntoConstraints = NO;
+    [NSLayoutConstraint activateConstraints:@[
+        [detail.widthAnchor constraintEqualToAnchor:section.widthAnchor],
+        [status.widthAnchor constraintEqualToAnchor:section.widthAnchor]
+    ]];
+    return section;
+}
+
 - (void)loadView {
-    self.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 540, 500)];
+    self.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 540, 560)];
     NSImageView *icon = [NSImageView imageViewWithImage:[NSImage imageNamed:NSImageNameApplicationIcon]];
     icon.translatesAutoresizingMaskIntoConstraints = NO;
     [NSLayoutConstraint activateConstraints:@[
-        [icon.widthAnchor constraintEqualToConstant:80],
-        [icon.heightAnchor constraintEqualToConstant:80]
+        [icon.widthAnchor constraintEqualToConstant:56],
+        [icon.heightAnchor constraintEqualToConstant:56]
     ]];
 
     NSTextField *title = [self label:@"Omnibar"
-        font:[NSFont systemFontOfSize:28 weight:NSFontWeightBold] color:NSColor.labelColor];
-    NSTextField *subtitle = [self label:@"Your tabs in the sidebar. Your address in the toolbar."
-        font:[NSFont systemFontOfSize:14 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
-    NSTextField *instructions = [self label:
-        @"Turn on Omnibar in Safari Settings → Extensions. Click its toolbar button to see the current address, open a website, or search."
-        font:[NSFont systemFontOfSize:13 weight:NSFontWeightRegular] color:NSColor.labelColor];
-    NSTextField *accessHint = [self label:
-        @"Allow website access to display the current address. You can still open websites and search without it."
-        font:[NSFont systemFontOfSize:12 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
-    NSTextField *toolbarHint = [self label:
-        @"If the button is hidden, choose View → Customize Toolbar in Safari and drag Omnibar into the toolbar."
-        font:[NSFont systemFontOfSize:12 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
+        font:[NSFont systemFontOfSize:26 weight:NSFontWeightBold] color:NSColor.labelColor];
+    NSTextField *subtitle = [self label:@"Two Safari extensions in one app. Enable either or both."
+        font:[NSFont systemFontOfSize:13 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
 
     self.statusLabel = [self label:@"Checking extension status…"
-        font:[NSFont systemFontOfSize:12 weight:NSFontWeightMedium] color:NSColor.secondaryLabelColor];
-    NSButton *settings = [NSButton buttonWithTitle:@"Open Safari Settings…" target:self action:@selector(openSafariSettings:)];
-    settings.controlSize = NSControlSizeLarge;
-    settings.bezelStyle = NSBezelStyleRounded;
-    settings.keyEquivalent = @"\r";
+        font:[NSFont systemFontOfSize:11 weight:NSFontWeightMedium] color:NSColor.secondaryLabelColor];
+    self.commandsStatusLabel = [self label:@"Checking extension status…"
+        font:[NSFont systemFontOfSize:11 weight:NSFontWeightMedium] color:NSColor.secondaryLabelColor];
+    self.paletteTipsButton = [NSButton buttonWithTitle:@"Show Palette Tips Again" target:self action:@selector(showPaletteTipsAgain:)];
+    self.paletteTipsButton.bezelStyle = NSBezelStyleRounded;
+    self.paletteTipsButton.toolTip = @"Show the introduction the next time you open the command palette on this Mac.";
+    NSButton *searchSettings = [NSButton buttonWithTitle:@"Search Settings…" target:self action:@selector(showSearchSettings:)];
+    searchSettings.bezelStyle = NSBezelStyleRounded;
+    searchSettings.toolTip = @"Manage search engines, website suffix, and private search. Neither Safari extension needs to be enabled.";
 
-    NSStackView *stack = [NSStackView stackViewWithViews:@[icon, title, subtitle, instructions, accessHint, toolbarHint, self.statusLabel, settings]];
+    NSStackView *addressSection = [self extensionSectionWithTitle:@"Omnibar"
+        description:@"The native toolbar palette for addresses, search, tabs, and commands. Allow website access to display the current address."
+        status:self.statusLabel action:@selector(openSafariSettings:) secondaryButton:searchSettings];
+    NSStackView *commandsSection = [self extensionSectionWithTitle:@"Omnibar Commands"
+        description:@"Press ⌘⇧P on a webpage for the centered keyboard palette. This extension has no toolbar palette."
+        status:self.commandsStatusLabel action:@selector(openCommandsSettings:) secondaryButton:nil];
+    NSTextField *privacy = [self label:@"No analytics or browsing data is sent to the developer. Searches go to the search provider you choose."
+        font:[NSFont systemFontOfSize:11 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
+    NSTextField *toolbarHint = [self label:@"Use the native Omnibar toolbar button on Safari’s Start Page and other pages that block the keyboard palette."
+        font:[NSFont systemFontOfSize:11 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
+    self.migrationLabel = [self label:@"Upgrading from the original extension? Open its Search Settings once to import saved settings. You can also configure new settings here."
+        font:[NSFont systemFontOfSize:11 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
+    self.migrationLabel.hidden = ![self searchSettings].sharedPreferencesMigrationPending;
+
+    NSStackView *stack = [NSStackView stackViewWithViews:@[icon, title, subtitle, addressSection, commandsSection, self.migrationLabel, self.paletteTipsButton, privacy, toolbarHint]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeCenterX;
-    stack.spacing = 12;
-    [stack setCustomSpacing:20 afterView:subtitle];
-    [stack setCustomSpacing:20 afterView:toolbarHint];
+    stack.spacing = 9;
+    [stack setCustomSpacing:17 afterView:subtitle];
+    [stack setCustomSpacing:17 afterView:addressSection];
+    [stack setCustomSpacing:17 afterView:commandsSection];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:stack];
+    self.setupContent = stack;
     [NSLayoutConstraint activateConstraints:@[
-        [stack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:48],
-        [stack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-48],
+        [stack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:44],
+        [stack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-44],
         [stack.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
         [subtitle.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
-        [instructions.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
-        [accessHint.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
-        [toolbarHint.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
-        [self.statusLabel.widthAnchor constraintEqualToAnchor:stack.widthAnchor]
+        [addressSection.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+        [commandsSection.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+        [self.migrationLabel.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+        [privacy.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+        [toolbarHint.widthAnchor constraintEqualToAnchor:stack.widthAnchor]
     ]];
 }
 
@@ -79,36 +133,115 @@ static NSString * const OmnibarExtensionIdentifier = @"com.dkaluta.omnibar.Exten
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-- (void)refreshExtensionState {
-    [SFSafariExtensionManager getStateOfSafariExtensionWithIdentifier:OmnibarExtensionIdentifier
+- (void)refreshStateForExtension:(NSString *)identifier name:(NSString *)name label:(NSTextField *)label {
+    [SFSafariExtensionManager getStateOfSafariExtensionWithIdentifier:identifier
         completionHandler:^(SFSafariExtensionState *state, NSError *error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (error || !state) {
-                    self.statusLabel.stringValue = @"Enable Omnibar in Safari to get started.";
-                    self.statusLabel.textColor = NSColor.secondaryLabelColor;
+                    label.stringValue = [NSString stringWithFormat:@"Enable %@ in Safari to get started.", name];
+                    label.textColor = NSColor.secondaryLabelColor;
                 } else if (state.enabled) {
-                    self.statusLabel.stringValue = @"Omnibar is enabled in Safari.";
-                    self.statusLabel.textColor = NSColor.systemGreenColor;
+                    label.stringValue = [NSString stringWithFormat:@"%@ is enabled in Safari.", name];
+                    label.textColor = NSColor.systemGreenColor;
                 } else {
-                    self.statusLabel.stringValue = @"Omnibar is not enabled yet.";
-                    self.statusLabel.textColor = NSColor.secondaryLabelColor;
+                    label.stringValue = [NSString stringWithFormat:@"%@ is not enabled yet.", name];
+                    label.textColor = NSColor.secondaryLabelColor;
                 }
             });
         }];
 }
 
-- (void)openSafariSettings:(id)sender {
-    [SFSafariApplication showPreferencesForExtensionWithIdentifier:OmnibarExtensionIdentifier
+- (void)refreshExtensionState {
+    self.migrationLabel.hidden = ![self searchSettings].sharedPreferencesMigrationPending;
+    self.paletteTipsButton.title = @"Show Palette Tips Again";
+    self.paletteTipsButton.enabled = YES;
+    [self refreshStateForExtension:OmnibarExtensionIdentifier(@".Extension") name:@"Omnibar" label:self.statusLabel];
+    [self refreshStateForExtension:OmnibarExtensionIdentifier(@".Commands") name:@"Omnibar Commands" label:self.commandsStatusLabel];
+}
+
+- (OmnibarSearchSettings *)searchSettings { return OmnibarSearchSettings.sharedSettings; }
+
+- (void)showSearchSettings:(id)sender {
+    (void)self.view;
+    if (self.settingsController) { OmnibarTraceSettingsRoute(250); return; }
+    OmnibarSearchSettings *settings = [self searchSettings];
+    if (settings.sharedConfigurationError) {
+        OmnibarTraceSettingsRoute(251); // Shared configuration rejected.
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"Search Settings Unavailable";
+        alert.informativeText = @"Omnibar’s shared settings could not be opened. Reinstall the signed app and try again.";
+        [alert addButtonWithTitle:@"OK"];
+        [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
+        return;
+    }
+    self.settingsController = [[SearchSettingsController alloc] initWithSettings:settings];
+    __weak typeof(self) weakSelf = self;
+    self.settingsController.onDone = ^{ [weakSelf closeSearchSettings]; };
+    [self addChildViewController:self.settingsController];
+    NSView *view = self.settingsController.view;
+    view.frame = self.view.bounds;
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    self.setupContent.hidden = YES;
+    [self.view addSubview:view];
+    self.view.window.title = @"Omnibar — Search Settings";
+    OmnibarTraceSettingsRoute(252); // Settings view installed in app window.
+}
+
+- (void)closeSearchSettings {
+    if (!self.settingsController) return;
+    [self.settingsController resetSensitiveFields];
+    self.settingsController.onDone = nil;
+    [self.settingsController.view removeFromSuperview];
+    [self.settingsController removeFromParentViewController];
+    self.settingsController = nil;
+    self.setupContent.hidden = NO;
+    self.migrationLabel.hidden = ![self searchSettings].sharedPreferencesMigrationPending;
+    self.view.window.title = @"Omnibar";
+}
+
+- (void)viewWillDisappear {
+    [self.settingsController resetSensitiveFields];
+    [super viewWillDisappear];
+}
+
+- (void)showPaletteTipsAgain:(id)sender {
+    NSString *group = NSBundle.mainBundle.infoDictionary[@"OmnibarSharedGroup"];
+    NSString *identifier = NSBundle.mainBundle.bundleIdentifier;
+    if (![group isKindOfClass:NSString.class] || !identifier.length
+        || ![group isEqual:[@"group." stringByAppendingString:identifier]]) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"Palette Settings Unavailable";
+        alert.informativeText = @"Omnibar’s shared settings could not be opened. Reinstall the signed app and try again.";
+        [alert addButtonWithTitle:@"OK"];
+        [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
+        return;
+    }
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:group];
+    OmnibarSetShowPaletteTips(defaults, YES);
+    self.paletteTipsButton.title = @"Tips Will Show Next Time";
+    self.paletteTipsButton.enabled = NO;
+}
+
+- (void)showSettingsForExtension:(NSString *)identifier name:(NSString *)name {
+    [SFSafariApplication showPreferencesForExtensionWithIdentifier:identifier
         completionHandler:^(NSError *error) {
             if (!error) return;
             dispatch_async(dispatch_get_main_queue(), ^{
                 NSAlert *alert = [[NSAlert alloc] init];
                 alert.messageText = @"Open Safari Settings";
-                alert.informativeText = @"In Safari, choose Safari → Settings → Extensions, then turn on Omnibar. If it is missing, make sure this app is in your Applications folder and reopen it.";
+                alert.informativeText = [NSString stringWithFormat:@"In Safari, choose Safari → Settings → Extensions, then turn on %@. If it is missing, make sure this app is in your Applications folder and reopen it.", name];
                 [alert addButtonWithTitle:@"OK"];
                 [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
             });
         }];
+}
+
+- (void)openSafariSettings:(id)sender {
+    [self showSettingsForExtension:OmnibarExtensionIdentifier(@".Extension") name:@"Omnibar"];
+}
+
+- (void)openCommandsSettings:(id)sender {
+    [self showSettingsForExtension:OmnibarExtensionIdentifier(@".Commands") name:@"Omnibar Commands"];
 }
 
 @end

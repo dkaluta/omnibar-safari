@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Omnibar Commands",
+  "version": "2.0",
+  "description": "Search, find tabs, and run Safari commands. No browsing data is collected.",
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "background": {
+    "page": "background.html",
+    "persistent": false
+  },
+  "commands": {
+    "open-palette": {
+      "description": "Open Omnibar’s centered command palette",
+      "suggested_key": {
+        "default": "Ctrl+Shift+P",
+        "mac": "Command+Shift+P"
+      }
+    }
+  },
+  "permissions": [
+    "tabs",
+    "nativeMessaging",
+    "activeTab",
+    "scripting"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "palette.html"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+  }
+}

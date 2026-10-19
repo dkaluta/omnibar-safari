@@ -17,6 +17,16 @@ NS_ASSUME_NONNULL_BEGIN
                       isSearch:(BOOL * _Nullable)isSearch
                          error:(NSError * _Nullable * _Nullable)error;
 
++ (nullable NSURL *)URLForInput:(NSString *)input
+                searchTemplate:(NSString *)searchTemplate
+              defaultURLSuffix:(NSString *)defaultURLSuffix
+                      isSearch:(BOOL * _Nullable)isSearch
+                         error:(NSError * _Nullable * _Nullable)error;
+
+// Accepts com or .co.uk and returns a lowercase, dot-prefixed DNS suffix.
++ (nullable NSString *)validatedDefaultURLSuffix:(NSString *)suffix
+                                          error:(NSError * _Nullable * _Nullable)error;
+
 + (nullable NSString *)validatedSearchTemplate:(NSString *)searchTemplate
                                          error:(NSError * _Nullable * _Nullable)error;
 

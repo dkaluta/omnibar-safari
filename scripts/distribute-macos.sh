@@ -8,6 +8,7 @@ if [[ $# -gt 1 || ! "$action" =~ ^(archive|export|upload)$ ]]; then
 fi
 
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
+node "$project_root/scripts/bundle-webextension.mjs" --check
 project_path="$project_root/native/Omnibar/Omnibar.xcodeproj"
 settings_key='objects.4225A17F305694F600A739B8.buildSettings'
 version="$(plutil -extract "$settings_key.MARKETING_VERSION" raw -o - "$project_path/project.pbxproj")"
@@ -33,6 +34,7 @@ if [[ "$action" == archive ]]; then
         CODE_SIGN_STYLE=Automatic \
         'CODE_SIGN_IDENTITY=Apple Development' \
         "DEVELOPMENT_TEAM=$team" \
+        OMNIBAR_APP_BUNDLE_IDENTIFIER=com.dkaluta.omnibar \
         archive 2>&1 | tee "$log_path"
 else
     if [[ ! -d "$archive_path" ]]; then
@@ -43,12 +45,16 @@ fi
 
 app_path="$archive_path/Products/Applications/Omnibar.app"
 extension_path="$app_path/Contents/PlugIns/Omnibar Extension.appex"
+commands_path="$app_path/Contents/PlugIns/Omnibar Commands.appex"
 codesign --verify --deep --strict --test-requirement '=anchor apple generic' "$app_path"
 codesign --verify --strict --test-requirement '=anchor apple generic' "$extension_path"
+codesign --verify --strict --test-requirement '=anchor apple generic' "$commands_path"
 plutil -lint "$app_path/Contents/Resources/PrivacyInfo.xcprivacy" \
-    "$extension_path/Contents/Resources/PrivacyInfo.xcprivacy"
+    "$extension_path/Contents/Resources/PrivacyInfo.xcprivacy" \
+    "$commands_path/Contents/Resources/PrivacyInfo.xcprivacy"
+python3 "$project_root/scripts/verify-macos-bundle.py" "$app_path" com.dkaluta.omnibar --team "$team"
 
-for bundle_path in "$app_path" "$extension_path"; do
+for bundle_path in "$app_path" "$extension_path" "$commands_path"; do
     metadata_path="$bundle_path/Contents/Info.plist"
     actual_version="$(plutil -extract CFBundleShortVersionString raw -o - "$metadata_path")"
     actual_build="$(plutil -extract CFBundleVersion raw -o - "$metadata_path")"
@@ -59,7 +65,8 @@ for bundle_path in "$app_path" "$extension_path"; do
     fi
 done
 if [[ "$(plutil -extract CFBundleIdentifier raw -o - "$app_path/Contents/Info.plist")" != com.dkaluta.omnibar \
-   || "$(plutil -extract CFBundleIdentifier raw -o - "$extension_path/Contents/Info.plist")" != com.dkaluta.omnibar.Extension ]]; then
+   || "$(plutil -extract CFBundleIdentifier raw -o - "$extension_path/Contents/Info.plist")" != com.dkaluta.omnibar.Extension \
+   || "$(plutil -extract CFBundleIdentifier raw -o - "$commands_path/Contents/Info.plist")" != com.dkaluta.omnibar.Commands ]]; then
     printf 'Archive bundle identifiers do not match Omnibar.\n' >&2
     exit 1
 fi

@@ -3,6 +3,7 @@
 #import "AddressPopoverController.h"
 #import "OmnibarURLResolver.h"
 #import "SearchSettingsController.h"
+#import "OmnibarBrowserSession.h"
 #import "SettingsTestSupport.h"
 
 // Exercise the real AppKit controller with deterministic Safari API stand-ins.
@@ -16,10 +17,12 @@
 - (void)controlTextDidChange:(NSNotification *)notification;
 - (void)showSearchSettings:(id)sender;
 - (void)closeSearchSettings;
+- (OmnibarBrowserSession *)newBrowserSessionForWindow:(SFSafariWindow *)window tab:(SFSafariTab *)tab;
 - (BOOL)control:(NSControl *)control textView:(NSTextView *)textView doCommandBySelector:(SEL)selector;
 @end
 
 @interface SearchSettingsController (Testing)
+- (BOOL)control:(NSControl *)control textView:(NSTextView *)textView doCommandBySelector:(SEL)selector;
 - (id<NSPasteboardWriting>)tableView:(NSTableView *)tableView pasteboardWriterForRow:(NSInteger)row;
 - (NSDragOperation)tableView:(NSTableView *)tableView validateDrop:(id<NSDraggingInfo>)info proposedRow:(NSInteger)row proposedDropOperation:(NSTableViewDropOperation)operation;
 - (BOOL)tableView:(NSTableView *)tableView acceptDrop:(id<NSDraggingInfo>)info row:(NSInteger)row dropOperation:(NSTableViewDropOperation)operation;
@@ -57,6 +60,33 @@
 }
 @end
 
+@interface TestBrowserSession : NSObject
+@property (copy) NSArray<NSDictionary *> *tabs;
+@property (copy) NSString *activatedIdentifier;
+@property (copy) NSString *performedCommand;
+@property (strong) NSError *failure;
+@property BOOL invalidated;
+@property BOOL deferAction;
+@property (copy) void (^reply)(NSError *);
+@end
+@implementation TestBrowserSession
+- (NSArray *)commands { return @[
+    @{@"id": @"open-page-new-tab", @"title": @"Open Page in New Tab", @"subtitle": @"Open this page’s address again", @"keywords": @"duplicate copy current page", @"symbol": @"square.on.square"},
+    @{@"id": @"reload-tab", @"title": @"Reload Tab", @"subtitle": @"View → Reload Page", @"keywords": @"refresh", @"symbol": @"arrow.clockwise"},
+    @{@"id": @"close-tab", @"title": @"Close Tab", @"subtitle": @"File → Close Tab", @"keywords": @"remove", @"symbol": @"xmark"},
+]; }
+- (void)loadTabsWithCompletion:(void (^)(NSArray *, NSError *))completion { completion(self.tabs ?: @[], nil); }
+- (void)activateTabWithIdentifier:(NSString *)identifier completion:(void (^)(NSError *))completion {
+    self.activatedIdentifier = identifier;
+    if (self.deferAction) self.reply = completion; else completion(self.failure);
+}
+- (void)performCommandWithIdentifier:(NSString *)identifier completion:(void (^)(NSError *))completion {
+    self.performedCommand = identifier;
+    if (self.deferAction) self.reply = completion; else completion(self.failure);
+}
+- (void)invalidate { self.invalidated = YES; }
+@end
+
 @interface TestPopover : AddressPopoverController
 @property NSUInteger dismissals;
 @property (strong) NSURL *externallyOpenedURL;
@@ -71,9 +101,15 @@
 @property BOOL deferSafariOpen;
 @property (copy) void (^safariApplicationReply)(NSURL *);
 @property (copy) void (^safariOpenReply)(NSError *);
+@property (strong) TestBrowserSession *testBrowserSession;
 @end
 @implementation TestPopover
 - (void)dismissPopover { self.dismissals++; [self clearSession]; }
+- (OmnibarBrowserSession *)newBrowserSessionForWindow:(SFSafariWindow *)window tab:(SFSafariTab *)tab {
+    self.testBrowserSession = [TestBrowserSession new];
+    self.testBrowserSession.tabs = [(id)window valueForKey:@"paletteTabs"];
+    return (id)self.testBrowserSession;
+}
 - (void)openExternalURL:(NSURL *)URL completionHandler:(void (^)(NSError *error))completionHandler {
     self.externallyOpenedURL = URL;
     if (self.deferExternalOpen) self.externalReply = completionHandler;
@@ -138,6 +174,7 @@
 @property BOOL failOpen;
 @property BOOL deferActiveTab;
 @property (copy) void (^tabReply)(SFSafariTab *);
+@property (copy) NSArray<NSDictionary *> *paletteTabs;
 @end
 @implementation TestSafariWindow
 - (void)getActiveTabWithCompletionHandler:(void (^)(SFSafariTab *))reply {
@@ -161,6 +198,12 @@ static void Drain(void) {
     while (deadline.timeIntervalSinceNow > 0) {
         [[NSRunLoop mainRunLoop] runMode:NSDefaultRunLoopMode beforeDate:deadline];
     }
+}
+
+static void DrainNavigation(TestPopover *controller) {
+    Drain();
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:2];
+    while ([[controller valueForKey:@"resolvingNavigation"] boolValue] && deadline.timeIntervalSinceNow > 0) Drain();
 }
 
 static TestSafariWindow *SafariWindow(NSString *url) {
@@ -259,29 +302,55 @@ static void TestEngineManagement(void) {
 
     SelectEngine(view, settings, @"kagi");
     NSSegmentedControl *panes = [view valueForKey:@"paneControl"];
-    panes.selectedSegment = 1;
+    panes.selectedSegment = 2;
     [NSApp sendAction:panes.action to:panes.target from:panes];
     WaitForPrivateStatus(view);
     Check(credentials.statusReads > 0 && ![(NSView *)[view valueForKey:@"privatePane"] isHidden],
           @"Kagi private settings can read status while Kagi is present");
     ((NSTextField *)[view valueForKey:@"privateLinkField"]).stringValue = @"UNSAVED_SENSITIVE_TEST_INPUT";
     [NSApp sendAction:NSSelectorFromString(@"removeEngine:") to:view from:nil]; Drain();
-    Check(panes.hidden && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+    Check(!panes.hidden && panes.segmentCount == 2 && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
           && ![(NSView *)[view valueForKey:@"enginesPane"] isHidden],
           @"removing Kagi hides its settings and returns to the engine list");
     Check([(NSTextField *)[view valueForKey:@"privateLinkField"] stringValue].length == 0 && [credentials.URL isEqual:savedCredential],
           @"removing Kagi clears typed sensitive input while preserving the saved private link");
-    Check([(NSLayoutConstraint *)[view valueForKey:@"editorTopConstraint"] isActive]
-          && ![(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
-          @"engine content reclaims the hidden Kagi tab space");
+    Check(![(NSLayoutConstraint *)[view valueForKey:@"editorTopConstraint"] isActive]
+          && [(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
+          @"engine and website sections remain available without Kagi");
     CheckEngineFooterLayout(view);
     NSUInteger statusReadsWithoutKagi = credentials.statusReads;
     panes.selectedSegment = 1;
     [NSApp sendAction:panes.action to:panes.target from:panes];
     [view viewWillAppear]; Drain();
-    Check(panes.selectedSegment == 0 && credentials.statusReads == statusReadsWithoutKagi
-          && [(NSView *)[view valueForKey:@"privatePane"] isHidden],
-          @"an absent Kagi pane cannot be activated or query credential status");
+    Check(panes.selectedSegment == 1 && credentials.statusReads == statusReadsWithoutKagi
+          && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && ![(NSView *)[view valueForKey:@"websitesPane"] isHidden],
+          @"website settings remain available without querying absent Kagi credentials");
+    NSTextField *suffix = [view valueForKey:@"suffixField"];
+    NSTextField *suffixStatus = [view valueForKey:@"suffixStatus"];
+    Check([suffix.stringValue isEqual:@".com"] && [suffix.accessibilityLabel isEqual:@"Default website suffix"],
+          @"website suffix starts at .com with an accessible field label");
+    NSDictionary *beforeSuffix = defaults.values.copy;
+    suffix.stringValue = @"co.uk";
+    [NSApp sendAction:NSSelectorFromString(@"saveSuffix:") to:view from:nil];
+    NSMutableDictionary *expectedAfterSuffix = beforeSuffix.mutableCopy;
+    expectedAfterSuffix[@"defaultURLSuffix"] = @".co.uk";
+    Check([settings.defaultURLSuffix isEqual:@".co.uk"] && [suffix.stringValue isEqual:@".co.uk"]
+          && [defaults.values isEqual:expectedAfterSuffix],
+          @"Save Suffix accepts and normalizes a multi-label suffix, saving only that preference");
+    Check([[(NSTextField *)[view valueForKey:@"suffixExample"] stringValue] containsString:@"https://www.cnn.co.uk"]
+          && [suffixStatus.stringValue isEqual:@"Website suffix saved"],
+          @"saving the suffix updates its example and confirmation");
+    suffix.stringValue = @"https://invalid.example/path";
+    [NSApp sendAction:NSSelectorFromString(@"saveSuffix:") to:view from:nil];
+    Check([defaults.values isEqual:expectedAfterSuffix] && [suffix.stringValue isEqual:@"https://invalid.example/path"]
+          && [suffixStatus.textColor isEqual:NSColor.systemRedColor] && suffixStatus.stringValue.length > 0,
+          @"an invalid suffix keeps the saved value and editable input, with an accessible error");
+    suffix.stringValue = @".org";
+    Check([view control:suffix textView:(id)nil doCommandBySelector:@selector(insertNewline:)]
+          && [settings.defaultURLSuffix isEqual:@".org"], @"Return in the suffix field saves its value");
+    Check(credentials.statusReads == statusReadsWithoutKagi && credentials.reads == 0,
+          @"website suffix settings never access Kagi credentials");
     [popover closeSearchSettings]; Drain();
     NSPopUpButton *engines = [popover valueForKey:@"engineButton"];
     Check(![[engines.itemArray valueForKey:@"representedObject"] containsObject:@"kagi"]
@@ -294,23 +363,23 @@ static void TestEngineManagement(void) {
     view = [popover valueForKey:@"settingsController"];
     panes = [view valueForKey:@"paneControl"];
     add = [view valueForKey:@"addEngineButton"];
-    Check(panes.hidden && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+    Check(!panes.hidden && panes.segmentCount == 2 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
           && credentials.statusReads == statusReadsWithoutKagi, @"reopening Settings keeps absent Kagi controls hidden without a credential query");
     [add.menu performActionForItemAtIndex:[add.menu indexOfItemWithTitle:@"Custom Search Engine…"]];
     Check([[view valueForKey:@"editingEngine"] boolValue], @"native Add menu opens the custom editor without Kagi");
     [NSApp sendAction:NSSelectorFromString(@"cancelEditor:") to:view from:nil];
-    Check(panes.hidden && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
-          && [(NSLayoutConstraint *)[view valueForKey:@"editorTopConstraint"] isActive],
-          @"canceling a custom editor does not reveal absent Kagi controls or their tab space");
+    Check(!panes.hidden && panes.segmentCount == 2 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+          && [(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
+          @"canceling a custom editor returns to engine and website sections without Kagi controls");
     restoreItem = RestoreItem(view, @"kagi");
     Check(restoreItem != nil, @"Kagi can be added back from the native menu");
     [add.menu performActionForItemAtIndex:[add.menu indexOfItem:restoreItem]]; Drain();
-    Check(!panes.hidden && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
+    Check(!panes.hidden && panes.segmentCount == 3 && panes.selectedSegment == 0 && [(NSView *)[view valueForKey:@"privatePane"] isHidden]
           && [(NSLayoutConstraint *)[view valueForKey:@"paneTopConstraint"] isActive],
           @"adding Kagi back restores the section tabs without opening private settings");
     Check([credentials.URL isEqual:savedCredential] && credentials.statusReads == statusReadsWithoutKagi,
           @"adding Kagi back preserves its saved credential without querying it");
-    panes.selectedSegment = 1;
+    panes.selectedSegment = 2;
     [NSApp sendAction:panes.action to:panes.target from:panes];
     WaitForPrivateStatus(view);
     Check([[view valueForKey:@"hasPrivateLink"] boolValue], @"restored Kagi settings recognize the retained private link");
@@ -358,6 +427,95 @@ static void TestEngineManagement(void) {
     [popover clearSession];
 }
 
+@interface TestMarkedEditor : NSTextView
+@end
+@implementation TestMarkedEditor
+- (BOOL)hasMarkedText { return YES; }
+@end
+
+static void TestNativePalette(TestApplication *app) {
+    OMTestDefaults *defaults;
+    OMTestCredentials *credentials;
+    OmnibarSearchSettings *settings = OMMakeTestSettings(&defaults, &credentials);
+    TestPopover *controller = [[TestPopover alloc] initWithNibName:nil bundle:nil];
+    [controller setValue:settings forKey:@"searchSettings"];
+    NSWindow *panel = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 520, 420) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+    panel.releasedWhenClosed = NO;
+    panel.contentView = controller.view;
+    NSTextField *field = [controller valueForKey:@"addressField"];
+    NSTableView *table = [controller valueForKey:@"resultsTable"];
+    TestSafariWindow *window = SafariWindow(@"https://cnn.com/current");
+    window.paletteTabs = @[
+        @{@"id": @"cnn", @"title": @"CNN", @"subtitle": @"cnn.com", @"current": @YES, @"index": @0},
+        @{@"id": @"docs", @"title": @"Documentation", @"subtitle": @"developer.example.com", @"current": @NO, @"index": @1},
+    ];
+    [controller prepareForWindow:(id)window]; Drain();
+    Check(![(NSView *)[controller valueForKey:@"tipsView"] isHidden], @"native palette reads the shared first-use hint preference");
+    [NSApp sendAction:NSSelectorFromString(@"dismissPaletteTips:") to:controller from:nil];
+    Check(!settings.showPaletteTips && [(NSView *)[controller valueForKey:@"tipsView"] isHidden], @"Got it only dismisses the local palette hints");
+    [((NSButton *)[controller valueForKey:@"tabsButton"]) performClick:nil];
+    Check(field.stringValue.length == 0 && [[controller valueForKey:@"paletteMode"] isEqual:@"tabs"], @"Tabs button replaces an untouched selected current address with an empty filter");
+    Check(table.numberOfRows == 2, @"native Tabs mode displays captured-window tabs");
+    Check([controller control:field textView:nil doCommandBySelector:@selector(moveDown:)] && table.selectedRow == 1, @"Down selects the next native result while the field remains focused");
+    Check([controller control:field textView:nil doCommandBySelector:@selector(moveUp:)] && table.selectedRow == 0, @"Up returns to the previous native result");
+    [controller control:field textView:nil doCommandBySelector:@selector(moveDown:)];
+    TestBrowserSession *tabsSession = controller.testBrowserSession;
+    [controller navigate:nil]; Drain();
+    Check([tabsSession.activatedIdentifier isEqual:@"docs"] && tabsSession.invalidated, @"Return switches the selected captured tab and clears the session");
+    Check(table.numberOfRows == 0 && field.stringValue.length == 0, @"dismissal removes native query and tab results from memory");
+
+    [controller prepareForWindow:(id)window]; Drain();
+    Type(controller, @"> reload");
+    Check([field.stringValue isEqual:@"reload"] && [[controller valueForKey:@"paletteMode"] isEqual:@"commands"], @"leading command marker becomes a separate mode without staying in editable text");
+    Check([[(NSTextField *)[controller valueForKey:@"modeLabel"] stringValue] isEqual:@"> Commands"], @"native Commands badge names its mode");
+    Check(table.numberOfRows == 1 && [[controller valueForKey:@"paletteResults"][0][@"id"] isEqual:@"reload-tab"], @"native command matching selects Reload");
+    TestBrowserSession *commandsSession = controller.testBrowserSession;
+    [controller openInNewTab:nil]; Drain();
+    Check([commandsSession.performedCommand isEqual:@"reload-tab"] && window.openedURL == nil, @"Command Return executes a selected command without inventing a tab navigation");
+
+    [controller prepareForWindow:(id)window]; Drain();
+    Type(controller, @"@ Documentation");
+    Check([field.stringValue isEqual:@"Documentation"] && table.numberOfRows == 1, @"pasted Tabs marker is removed and filters captured tabs");
+    Type(controller, @"");
+    Check([[controller valueForKey:@"paletteMode"] isEqual:@"tabs"], @"clearing text preserves explicit native mode");
+    app.testEvent = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:NSEventModifierFlagOption timestamp:0 windowNumber:0 context:nil characters:@"\x7f" charactersIgnoringModifiers:@"\x7f" isARepeat:NO keyCode:51];
+    Check(![controller control:field textView:nil doCommandBySelector:@selector(deleteBackward:)] && [[controller valueForKey:@"paletteMode"] isEqual:@"tabs"], @"modified Backspace retains native text editing behavior");
+    app.testEvent = nil;
+    Check([controller control:field textView:nil doCommandBySelector:@selector(deleteBackward:)] && [[controller valueForKey:@"paletteMode"] isEqual:@"search"], @"unmodified Backspace in an empty mode returns to Search");
+    TestMarkedEditor *marked = [TestMarkedEditor new];
+    NSUInteger dismissals = controller.dismissals;
+    Check(![controller control:field textView:marked doCommandBySelector:@selector(cancelOperation:)] && controller.dismissals == dismissals, @"Escape first belongs to marked-text input instead of dismissing the palette");
+    Check(![controller control:field textView:marked doCommandBySelector:@selector(insertNewline:)], @"marked-text Return never submits an action");
+    Type(controller, @"2 > 1");
+    Check([[controller valueForKey:@"paletteMode"] isEqual:@"search"] && [field.stringValue isEqual:@"2 > 1"], @"ordinary greater-than text remains a search");
+
+    [settings setDefaultURLSuffix:@".co.uk" error:NULL];
+    Type(controller, @".bbc");
+    Check([field.stringValue isEqual:@".bbc"] && [[controller valueForKey:@"addressPreview"][@"destination"] isEqual:@"https://www.bbc.co.uk/"], @"native shorthand preview uses the configured suffix without replacing typed text");
+    Check([[(NSTextField *)[controller valueForKey:@"modeLabel"] stringValue] isEqual:@"Website"] && ![(NSPopUpButton *)[controller valueForKey:@"engineButton"] isEnabled], @"native address preview shows Website mode and disables an irrelevant engine picker");
+    Check(credentials.reads == 0, @"all native typing, filtering and previews avoid Keychain reads");
+    Check([controller control:field textView:nil doCommandBySelector:@selector(insertTab:)] && [field.stringValue isEqual:@"https://www.bbc.co.uk/"], @"Tab accepts a valid expanded website destination");
+    Check(![controller control:field textView:nil doCommandBySelector:@selector(insertTab:)], @"Tab resumes normal focus traversal for a complete address");
+    Type(controller, @"https://");
+    Check([[(NSTextField *)[controller valueForKey:@"modeLabel"] stringValue] isEqual:@"Website"] && ![controller control:field textView:nil doCommandBySelector:@selector(insertTab:)], @"incomplete scheme stays in Website mode without trapping Tab");
+    Type(controller, @"");
+    Check([[(NSTextField *)[controller valueForKey:@"modeLabel"] stringValue] length] == 0, @"deleting an address returns derived Website mode to Search");
+    Check(![[defaults.values allValues] containsObject:@".bbc"] && ![[defaults.values allValues] containsObject:@"Documentation"], @"native palette never persists query or tab metadata");
+
+    Type(controller, @"> reload");
+    TestBrowserSession *pendingSession = controller.testBrowserSession;
+    pendingSession.deferAction = YES;
+    [controller navigate:nil];
+    Check(!field.enabled && [[controller valueForKey:@"browserActionPending"] boolValue], @"pending browser actions disable repeated native submission");
+    [controller clearSession];
+    [controller prepareForWindow:(id)SafariWindow(@"https://later.example/")]; Drain();
+    dismissals = controller.dismissals;
+    pendingSession.reply(nil);
+    Check(controller.dismissals == dismissals && [field.stringValue isEqual:@"https://later.example/"], @"late browser-action completion cannot dismiss or edit a later native session");
+    [controller clearSession];
+    [panel close];
+}
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         TestApplication *app = (id)[TestApplication sharedApplication];
@@ -376,9 +534,9 @@ int main(int argc, const char *argv[]) {
         NSTextField *status = [controller valueForKey:@"statusLabel"];
 
         TestSafariWindow *first = SafariWindow(@"https://example.com/a?one=1#section");
-        [controller prepareForWindow:(id)first]; Drain();
+        [controller prepareForWindow:(id)first]; DrainNavigation(controller);
         NSDate *firstDeadline = [NSDate dateWithTimeIntervalSinceNow:2];
-        while (![[controller valueForKey:@"resolvedAddress"] boolValue] && firstDeadline.timeIntervalSinceNow > 0) Drain();
+        while (![[controller valueForKey:@"resolvedAddress"] boolValue] && firstDeadline.timeIntervalSinceNow > 0) DrainNavigation(controller);
         Check([field.stringValue isEqualToString:first.tab.page.url.absoluteString], @"shows full current URL including query and fragment");
         Check([field.accessibilityLabel isEqualToString:@"Website address or search"], @"address has an accessibility label");
         Check(((NSPopUpButton *)[controller valueForKey:@"engineButton"]).numberOfItems == (NSInteger)OmnibarURLResolver.searchEngines.count, @"all built-in search engines available");
@@ -388,69 +546,69 @@ int main(int argc, const char *argv[]) {
         TestTab *origin = first.tab;
         first.tab = [TestTab new]; // A different tab becomes active after opening.
         Type(controller, @"example.org/path");
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check([origin.navigatedURL.absoluteString isEqualToString:@"https://example.org/path"], @"navigation targets originating tab");
         Check(first.tab.navigatedURL == nil, @"newly active tab is untouched");
         Check(field.stringValue.length == 0, @"dismissal clears the address");
 
         TestSafariWindow *slow = SafariWindow(@"https://slow.example/");
         slow.tab.page.deferProperties = YES;
-        [controller prepareForWindow:(id)slow]; Drain();
+        [controller prepareForWindow:(id)slow]; DrainNavigation(controller);
         Type(controller, @"already typing");
-        [slow.tab.page respond]; Drain();
+        [slow.tab.page respond]; DrainNavigation(controller);
         Check([field.stringValue isEqualToString:@"already typing"], @"late URL response preserves user input");
 
         TestSafariWindow *older = SafariWindow(@"https://old.example/");
         older.tab.page.deferProperties = YES;
-        [controller prepareForWindow:(id)older]; Drain();
+        [controller prepareForWindow:(id)older]; DrainNavigation(controller);
         TestSafariWindow *latest = SafariWindow(@"https://latest.example/");
-        [controller prepareForWindow:(id)latest]; Drain();
-        [older.tab.page respond]; Drain();
+        [controller prepareForWindow:(id)latest]; DrainNavigation(controller);
+        [older.tab.page respond]; DrainNavigation(controller);
         Check([field.stringValue isEqualToString:@"https://latest.example/"], @"stale session cannot overwrite a newer URL");
 
         TestSafariWindow *closed = SafariWindow(@"https://closed.example/");
         closed.tab.page.deferProperties = YES;
-        [controller prepareForWindow:(id)closed]; Drain();
-        [controller clearSession]; [closed.tab.page respond]; Drain();
+        [controller prepareForWindow:(id)closed]; DrainNavigation(controller);
+        [controller clearSession]; [closed.tab.page respond]; DrainNavigation(controller);
         Check(field.stringValue.length == 0, @"late callback cannot restore a closed session address");
 
         TestSafariWindow *pending = SafariWindow(@"https://pending.example/");
         pending.deferActiveTab = YES;
         [controller prepareForWindow:(id)pending];
-        Type(controller, @"example.net"); [controller navigate:nil]; Drain();
+        Type(controller, @"example.net"); [controller navigate:nil]; DrainNavigation(controller);
         Check(pending.openedURL == nil && pending.tab.navigatedURL == nil, @"Return while identifying originating tab cannot navigate another tab");
-        pending.tabReply((id)pending.tab); pending.tabReply = nil; Drain();
+        pending.tabReply((id)pending.tab); pending.tabReply = nil; DrainNavigation(controller);
         Check([field.stringValue isEqualToString:@"example.net"], @"early typing preserved after tab lookup");
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check([pending.tab.navigatedURL.host isEqualToString:@"example.net"], @"Return works once originating tab resolves");
 
         TestSafariWindow *unavailable = SafariWindow(nil);
-        [controller prepareForWindow:(id)unavailable]; Drain();
+        [controller prepareForWindow:(id)unavailable]; DrainNavigation(controller);
         Check(field.stringValue.length == 0, @"unavailable URL has an empty editable field");
         Check(field.toolTip == nil && [status.stringValue containsString:@"unavailable"], @"unavailable URL clears its tooltip and explains that an address can still be entered");
-        Type(controller, @"cats & dogs"); [controller navigate:nil]; Drain();
+        Type(controller, @"cats & dogs"); [controller navigate:nil]; DrainNavigation(controller);
         Check([unavailable.tab.navigatedURL.host isEqualToString:@"duckduckgo.com"], @"search works even without website URL access");
 
         TestSafariWindow *kagi = SafariWindow(@"https://example.com/");
-        [controller prepareForWindow:(id)kagi]; Drain();
+        [controller prepareForWindow:(id)kagi]; DrainNavigation(controller);
         [(NSPopUpButton *)[controller valueForKey:@"engineButton"] selectItemWithTitle:@"Kagi"];
-        Type(controller, @"safari vertical tabs"); [controller navigate:nil]; Drain();
+        Type(controller, @"safari vertical tabs"); [controller navigate:nil]; DrainNavigation(controller);
         Check([kagi.tab.navigatedURL.host isEqualToString:@"kagi.com"] && [kagi.tab.navigatedURL.path isEqualToString:@"/search"], @"Kagi selection submits to Kagi search");
 
         credentials.URL = @"https://kagi.com/search?token=FAKE_TEST_TOKEN&q=%s";
         TestSafariWindow *privateKagi = SafariWindow(@"https://example.com/");
         privateKagi.tab.page.usesPrivateBrowsing = YES;
-        [controller prepareForWindow:(id)privateKagi]; Drain();
+        [controller prepareForWindow:(id)privateKagi]; DrainNavigation(controller);
         [(NSPopUpButton *)[controller valueForKey:@"engineButton"] selectItemWithTitle:@"Kagi"];
-        Type(controller, @"a private search"); [controller navigate:nil]; Drain();
+        Type(controller, @"a private search"); [controller navigate:nil]; DrainNavigation(controller);
         Check([privateKagi.tab.navigatedURL.query containsString:@"token=FAKE_TEST_TOKEN"], @"Safari private browsing state selects the Kagi session link");
-        [controller prepareForWindow:(id)kagi]; Drain();
+        [controller prepareForWindow:(id)kagi]; DrainNavigation(controller);
         [(NSPopUpButton *)[controller valueForKey:@"engineButton"] selectItemWithTitle:@"Kagi"];
-        Type(controller, @"a normal search"); [controller navigate:nil]; Drain();
+        Type(controller, @"a normal search"); [controller navigate:nil]; DrainNavigation(controller);
         Check(![kagi.tab.navigatedURL.query containsString:@"token="], @"private state is reset between Safari sessions");
 
-        [controller prepareForWindow:(id)kagi]; Drain(); Type(controller, @"unfinished search");
-        [controller showSearchSettings:nil]; Drain();
+        [controller prepareForWindow:(id)kagi]; DrainNavigation(controller); Type(controller, @"unfinished search");
+        [controller showSearchSettings:nil]; DrainNavigation(controller);
         Check([[controller valueForKey:@"showingSettings"] boolValue], @"Search Settings opens inside popover");
         SearchSettingsController *settingsView = [controller valueForKey:@"settingsController"];
         Check(NSEqualRects(settingsView.view.frame, controller.view.bounds), @"settings view fits the resized popover without clipping");
@@ -477,11 +635,11 @@ int main(int argc, const char *argv[]) {
         [NSApp sendAction:NSSelectorFromString(@"addEngine:") to:settingsView from:nil];
         ((NSTextField *)[settingsView valueForKey:@"nameField"]).stringValue = @"Preview Test Engine";
         ((NSTextField *)[settingsView valueForKey:@"templateField"]).stringValue = @"https://example.org/?q=%s";
-        [NSApp sendAction:NSSelectorFromString(@"saveEngine:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"saveEngine:") to:settingsView from:nil]; DrainNavigation(controller);
         Check([settings.searchEngines.firstObject[@"name"] isEqual:@"Preview Test Engine"], @"Save Engine UI creates and selects custom default");
         Check(![[settingsView valueForKey:@"editingEngine"] boolValue], @"successful Add returns to the engine list");
         NSString *customID = settings.selectedEngineID;
-        [NSApp sendAction:NSSelectorFromString(@"moveEngineDown:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"moveEngineDown:") to:settingsView from:nil]; DrainNavigation(controller);
         Check(![settings.selectedEngineID isEqual:customID], @"Move Down UI changes default");
         NSString *defaultBeforeEditing = settings.selectedEngineID;
         [NSApp sendAction:NSSelectorFromString(@"editEngine:") to:settingsView from:nil];
@@ -495,7 +653,7 @@ int main(int argc, const char *argv[]) {
         Check([[settingsView valueForKey:@"editingEngine"] boolValue] && [((NSTextField *)[settingsView valueForKey:@"nameField"]).stringValue isEqual:@"Google"], @"invalid edit keeps its editor and input");
         Check([((NSTextField *)[settingsView valueForKey:@"engineStatus"]).stringValue containsString:@"already exists"], @"duplicate name error explains how to fix the edit");
         ((NSTextField *)[settingsView valueForKey:@"nameField"]).stringValue = @"Edited Test Engine";
-        [NSApp sendAction:NSSelectorFromString(@"saveEngine:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"saveEngine:") to:settingsView from:nil]; DrainNavigation(controller);
         Check([settings.selectedEngineID isEqual:defaultBeforeEditing] && [settings.searchEngines[1][@"id"] isEqual:customID], @"editing a custom engine preserves its position and the default");
         NSTableView *engineTable = [settingsView valueForKey:@"engineTable"];
         TestEngineDrag *drag = [TestEngineDrag new];
@@ -510,20 +668,20 @@ int main(int argc, const char *argv[]) {
         drag.draggingSource = [NSObject new];
         Check([settingsView tableView:engineTable validateDrop:(id)drag proposedRow:0 proposedDropOperation:NSTableViewDropAbove] == NSDragOperationNone && ![settingsView tableView:engineTable acceptDrop:(id)drag row:0 dropOperation:NSTableViewDropAbove], @"external drag sources cannot change engine order");
         Check([[settings.searchEngines valueForKey:@"id"] isEqual:orderBeforeExternalDrag], @"rejected drag preserves saved order");
-        [NSApp sendAction:NSSelectorFromString(@"moveEngineUp:") to:settingsView from:nil]; Drain();
-        [NSApp sendAction:NSSelectorFromString(@"moveEngineUp:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"moveEngineUp:") to:settingsView from:nil]; DrainNavigation(controller);
+        [NSApp sendAction:NSSelectorFromString(@"moveEngineUp:") to:settingsView from:nil]; DrainNavigation(controller);
         Check([settings.selectedEngineID isEqual:customID], @"Move Up UI restores selected engine to default");
-        [NSApp sendAction:NSSelectorFromString(@"removeEngine:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"removeEngine:") to:settingsView from:nil]; DrainNavigation(controller);
         Check(settings.customSearchEngines.count == 0, @"Remove Engine UI deletes selected custom engine");
         NSSegmentedControl *paneControl = [settingsView valueForKey:@"paneControl"];
-        paneControl.selectedSegment = 1;
-        [NSApp sendAction:NSSelectorFromString(@"changePane:") to:settingsView from:paneControl]; Drain();
+        paneControl.selectedSegment = 2;
+        [NSApp sendAction:NSSelectorFromString(@"changePane:") to:settingsView from:paneControl]; DrainNavigation(controller);
         Check(![(NSView *)[settingsView valueForKey:@"privatePane"] isHidden] && [(NSView *)[settingsView valueForKey:@"enginesPane"] isHidden], @"Kagi credentials have a separate pane");
         ((NSTextField *)[settingsView valueForKey:@"privateLinkField"]).stringValue = @"https://kagi.com/search?token=NEW_FAKE_TEST_TOKEN&q=%s";
-        [NSApp sendAction:NSSelectorFromString(@"savePrivateLink:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"savePrivateLink:") to:settingsView from:nil]; DrainNavigation(controller);
         Check([credentials.URL containsString:@"NEW_FAKE_TEST_TOKEN"], @"Save Link UI writes to credential store");
         Check([(NSTextField *)[settingsView valueForKey:@"privateLinkField"] stringValue].length == 0, @"Save Link clears sensitive field");
-        [NSApp sendAction:NSSelectorFromString(@"removePrivateLink:") to:settingsView from:nil]; Drain();
+        [NSApp sendAction:NSSelectorFromString(@"removePrivateLink:") to:settingsView from:nil]; DrainNavigation(controller);
         Check(credentials.URL == nil, @"Remove Link UI clears credential store");
         ((NSTextField *)[settingsView valueForKey:@"privateLinkField"]).stringValue = @"UNSAVED_TEST_INPUT";
         paneControl.selectedSegment = 0;
@@ -531,32 +689,32 @@ int main(int argc, const char *argv[]) {
         Check([(NSTextField *)[settingsView valueForKey:@"privateLinkField"] stringValue].length == 0, @"leaving the Kagi pane clears an unsaved private link");
         ((NSTextField *)[settingsView valueForKey:@"privateLinkField"]).stringValue = @"UNSAVED_TEST_INPUT";
         [settings moveEngineWithIdentifier:@"kagi" toIndex:0];
-        [controller closeSearchSettings]; Drain();
+        [controller closeSearchSettings]; DrainNavigation(controller);
         Check([(NSTextField *)[settingsView valueForKey:@"privateLinkField"] stringValue].length == 0, @"closing settings clears unsaved private link");
         Check([field.stringValue isEqualToString:@"unfinished search"], @"returning from settings preserves typed input");
         Check([((NSPopUpButton *)[controller valueForKey:@"engineButton"]).selectedItem.representedObject isEqual:@"kagi"], @"reordering updates default engine in popover");
         settings.selectedEngineID = @"duckduckgo";
 
         TestSafariWindow *internal = SafariWindow(@"about:blank");
-        [controller prepareForWindow:(id)internal]; Drain();
+        [controller prepareForWindow:(id)internal]; DrainNavigation(controller);
         Check([field.stringValue isEqualToString:@"about:blank"] && [field.toolTip isEqualToString:@"about:blank"],
               @"a provided internal URL is displayed in full rather than hidden by its scheme");
         Check(((NSTextView *)field.currentEditor).selectedRange.length == field.stringValue.length,
               @"a provided internal URL is selected for replacement like other addresses");
         Type(controller, @"custom://[invalid");
         NSUInteger before = controller.dismissals;
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check(internal.tab.navigatedURL == nil && before == controller.dismissals, @"malformed explicit URL stays open without navigation");
         Check(status.stringValue.length > 0, @"invalid address shows a readable message");
 
         for (NSString *destination in @[@"file:///tmp/Omnibar.html", @"javascript:void(0)", @"data:text/plain,Hello"]) {
             for (NSUInteger newTab = 0; newTab < 2; newTab++) {
                 TestSafariWindow *schemeWindow = SafariWindow(@"https://example.com/");
-                [controller prepareForWindow:(id)schemeWindow]; Drain(); Type(controller, destination);
+                [controller prepareForWindow:(id)schemeWindow]; DrainNavigation(controller); Type(controller, destination);
                 before = controller.dismissals;
                 if (newTab) [controller openInNewTab:nil];
                 else [controller navigate:nil];
-                Drain();
+                DrainNavigation(controller);
                 NSURL *navigatedURL = newTab ? schemeWindow.openedURL : schemeWindow.tab.navigatedURL;
                 Check([navigatedURL.absoluteString isEqualToString:destination] && controller.dismissals == before + 1,
                       @"explicit scheme is forwarded unchanged to Safari's current-tab or new-tab navigation API");
@@ -567,64 +725,64 @@ int main(int argc, const char *argv[]) {
 
         for (NSString *destination in @[@"about:blank", @"about:blank#section"]) {
             TestSafariWindow *blankWindow = SafariWindow(@"https://example.com/");
-            [controller prepareForWindow:(id)blankWindow]; Drain(); Type(controller, destination);
-            before = controller.dismissals; [controller navigate:nil]; Drain();
+            [controller prepareForWindow:(id)blankWindow]; DrainNavigation(controller); Type(controller, destination);
+            before = controller.dismissals; [controller navigate:nil]; DrainNavigation(controller);
             Check([blankWindow.openedURL.absoluteString isEqualToString:destination] && blankWindow.tab.navigatedURL == nil
                   && controller.dismissals == before + 1, @"about:blank uses Safari's tab-opening API with completion reporting");
             Check(controller.safariOpenedURL == nil, @"a successful Safari tab opening needs no application-opening fallback");
         }
         TestSafariWindow *rejectedBlank = SafariWindow(@"https://example.com/"); rejectedBlank.failOpen = YES;
-        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank");
-        before = controller.dismissals; [controller navigate:nil]; Drain();
+        [controller prepareForWindow:(id)rejectedBlank]; DrainNavigation(controller); Type(controller, @"about:blank");
+        before = controller.dismissals; [controller navigate:nil]; DrainNavigation(controller);
         Check(controller.dismissals == before && [status.stringValue containsString:@"unavailable"] && field.stringValue.length > 0,
               @"an unavailable Safari host keeps the blank-page input visible and reports failure");
         Check(controller.safariOpenedURL == nil && ((NSButton *)[controller valueForKey:@"goButton"]).enabled,
               @"a missing Safari application never falls back to the system default browser and permits retry");
         controller.safariApplicationURL = [NSURL fileURLWithPath:@"/Applications/Safari Technology Preview.app"];
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check(controller.dismissals == before + 1 && [controller.safariOpenedURL.absoluteString isEqualToString:@"about:blank"]
               && [controller.safariOpenApplicationURL isEqual:controller.safariApplicationURL],
               @"a rejected blank tab is handed to the connected Safari application through the workspace API");
 
-        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank#section");
+        [controller prepareForWindow:(id)rejectedBlank]; DrainNavigation(controller); Type(controller, @"about:blank#section");
         controller.safariOpenError = [NSError errorWithDomain:@"test" code:2
                                                     userInfo:@{NSLocalizedDescriptionKey: @"Safari rejected the blank page."}];
-        before = controller.dismissals; [controller navigate:nil]; Drain();
+        before = controller.dismissals; [controller navigate:nil]; DrainNavigation(controller);
         Check(controller.dismissals == before && [status.stringValue containsString:@"rejected"]
               && [controller.safariOpenedURL.absoluteString isEqualToString:@"about:blank#section"],
               @"Safari application-opening errors remain visible and preserve the complete blank-page URL");
         controller.safariOpenError = nil;
         controller.safariOpenedURL = nil;
         controller.deferSafariApplication = YES;
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check(!((NSButton *)[controller valueForKey:@"goButton"]).enabled, @"Safari application lookup disables repeated submission");
         [controller clearSession];
-        [controller prepareForWindow:(id)SafariWindow(@"https://later-session.example/")]; Drain();
+        [controller prepareForWindow:(id)SafariWindow(@"https://later-session.example/")]; DrainNavigation(controller);
         before = controller.dismissals;
         controller.safariApplicationReply(controller.safariApplicationURL); controller.safariApplicationReply = nil;
-        controller.deferSafariApplication = NO; Drain();
+        controller.deferSafariApplication = NO; DrainNavigation(controller);
         Check(controller.safariOpenedURL == nil && controller.dismissals == before
               && [field.stringValue isEqualToString:@"https://later-session.example/"],
               @"a late Safari application lookup cannot open a URL after the original popover closes");
 
-        [controller prepareForWindow:(id)rejectedBlank]; Drain(); Type(controller, @"about:blank");
+        [controller prepareForWindow:(id)rejectedBlank]; DrainNavigation(controller); Type(controller, @"about:blank");
         controller.deferSafariOpen = YES;
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         [controller clearSession];
-        [controller prepareForWindow:(id)SafariWindow(@"https://another-session.example/")]; Drain();
+        [controller prepareForWindow:(id)SafariWindow(@"https://another-session.example/")]; DrainNavigation(controller);
         before = controller.dismissals;
-        controller.safariOpenReply(nil); controller.safariOpenReply = nil; controller.deferSafariOpen = NO; Drain();
+        controller.safariOpenReply(nil); controller.safariOpenReply = nil; controller.deferSafariOpen = NO; DrainNavigation(controller);
         Check(controller.dismissals == before && [field.stringValue isEqualToString:@"https://another-session.example/"],
               @"a late Safari application-open completion cannot dismiss a subsequent popover");
 
         for (NSString *destination in @[@"mailto:person@example.com", @"tel:123", @"custom://open"]) {
             for (NSUInteger newTab = 0; newTab < 2; newTab++) {
                 TestSafariWindow *externalWindow = SafariWindow(@"https://example.com/");
-                [controller prepareForWindow:(id)externalWindow]; Drain(); Type(controller, destination);
+                [controller prepareForWindow:(id)externalWindow]; DrainNavigation(controller); Type(controller, destination);
                 before = controller.dismissals;
                 if (newTab) [controller openInNewTab:nil];
                 else [controller navigate:nil];
-                Drain();
+                DrainNavigation(controller);
                 Check([controller.externallyOpenedURL.absoluteString isEqualToString:destination] && controller.dismissals == before + 1,
                       @"external links use the system handler for Return and Command-Return");
                 Check(externalWindow.tab.navigatedURL == nil && externalWindow.openedURL == nil,
@@ -633,10 +791,10 @@ int main(int argc, const char *argv[]) {
         }
 
         TestSafariWindow *failedExternal = SafariWindow(@"https://example.com/");
-        [controller prepareForWindow:(id)failedExternal]; Drain(); Type(controller, @"custom://open");
+        [controller prepareForWindow:(id)failedExternal]; DrainNavigation(controller); Type(controller, @"custom://open");
         controller.externalOpenError = [NSError errorWithDomain:@"test" code:1
                                                       userInfo:@{NSLocalizedDescriptionKey: @"No application is registered for this URL type."}];
-        before = controller.dismissals; [controller navigate:nil]; Drain();
+        before = controller.dismissals; [controller navigate:nil]; DrainNavigation(controller);
         Check(before == controller.dismissals && [status.stringValue containsString:@"No application"],
               @"system handler failures keep the popover open and show the error");
         Check(field.stringValue.length > 0 && ((NSButton *)[controller valueForKey:@"goButton"]).enabled,
@@ -645,33 +803,34 @@ int main(int argc, const char *argv[]) {
               @"failed external links never fall back to a search");
         controller.externalOpenError = nil;
         controller.deferExternalOpen = YES;
-        [controller navigate:nil]; Drain();
+        [controller navigate:nil]; DrainNavigation(controller);
         Check(!((NSButton *)[controller valueForKey:@"goButton"]).enabled, @"external opening disables repeated submission until completion");
         [controller clearSession];
-        [controller prepareForWindow:(id)SafariWindow(@"https://new-session.example/")]; Drain();
+        [controller prepareForWindow:(id)SafariWindow(@"https://new-session.example/")]; DrainNavigation(controller);
         before = controller.dismissals;
-        controller.externalReply(nil); controller.externalReply = nil; controller.deferExternalOpen = NO; Drain();
+        controller.externalReply(nil); controller.externalReply = nil; controller.deferExternalOpen = NO; DrainNavigation(controller);
         Check(before == controller.dismissals && [field.stringValue isEqualToString:@"https://new-session.example/"],
               @"a late external-open callback cannot dismiss or mutate a later popover session");
 
         TestSafariWindow *command = SafariWindow(@"https://example.com/");
-        [controller prepareForWindow:(id)command]; Drain(); Type(controller, @"apple.com");
+        [controller prepareForWindow:(id)command]; DrainNavigation(controller); Type(controller, @"apple.com");
         app.testEvent = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
             modifierFlags:NSEventModifierFlagCommand timestamp:0 windowNumber:0 context:nil
             characters:@"\r" charactersIgnoringModifiers:@"\r" isARepeat:NO keyCode:36];
         Check([controller control:field textView:nil doCommandBySelector:@selector(insertNewline:)], @"Return command handled by address field");
-        Drain(); app.testEvent = nil;
+        DrainNavigation(controller); app.testEvent = nil;
         Check([command.openedURL.host isEqualToString:@"apple.com"] && command.tab.navigatedURL == nil, @"Command Return opens a new tab in the originating window");
 
         TestSafariWindow *noTab = SafariWindow(nil); noTab.tab = nil; noTab.failOpen = YES;
-        [controller prepareForWindow:(id)noTab]; Drain(); Type(controller, @"apple.com");
-        before = controller.dismissals; [controller navigate:nil]; Drain();
+        [controller prepareForWindow:(id)noTab]; DrainNavigation(controller); Type(controller, @"apple.com");
+        before = controller.dismissals; [controller navigate:nil]; DrainNavigation(controller);
         Check(before == controller.dismissals && [status.stringValue containsString:@"couldn’t"], @"failed new tab stays open with an error");
         Check(((NSButton *)[controller valueForKey:@"goButton"]).enabled, @"new tab failure re-enables Go");
         Check([controller control:field textView:nil doCommandBySelector:@selector(cancelOperation:)], @"Escape dismisses popover");
         Check(controller.dismissals == before + 1 && field.stringValue.length == 0, @"Escape clears session address");
 
         TestEngineManagement();
+        TestNativePalette(app);
         printf("Passed %lu native popover checks. Safari API calls were simulated.\n", (unsigned long)checks);
         if (argc > 2 && [@(argv[2]) isEqualToString:@"--preview"]) {
             [[NSUserDefaults standardUserDefaults] removeVolatileDomainForName:NSArgumentDomain];
@@ -686,7 +845,7 @@ int main(int argc, const char *argv[]) {
             if (previewWithoutKagi) [settings removeEngineWithIdentifier:@"kagi"];
             [controller prepareForWindow:(id)SafariWindow(@"https://example.com/a?one=1#section")];
             if (previewWithoutKagi || [NSProcessInfo.processInfo.arguments containsObject:@"--preview-settings"]) {
-                Drain();
+                DrainNavigation(controller);
                 [controller showSearchSettings:nil];
             }
             [panel center];

@@ -15,6 +15,14 @@ NS_ASSUME_NONNULL_BEGIN
 @interface OmnibarSearchSettings : NSObject
 + (instancetype)sharedSettings;
 - (instancetype)initWithDefaults:(NSUserDefaults *)defaults credentialStore:(id<OmnibarCredentialStoring>)credentialStore;
+// A companion opened first uses defaults until the original extension imports
+// the user's local engine settings. No browsing activity is shared or saved.
+@property (nonatomic, readonly) BOOL sharedPreferencesMigrationPending;
+@property (nonatomic, readonly, nullable) NSError *sharedConfigurationError;
+// Local onboarding preference; reading its default never writes activity data.
+@property (nonatomic) BOOL showPaletteTips;
+@property (nonatomic, readonly) NSString *defaultURLSuffix;
+- (BOOL)setDefaultURLSuffix:(NSString *)suffix error:(NSError * _Nullable * _Nullable)error;
 @property (nonatomic, copy) NSString *selectedEngineID;
 @property (nonatomic, readonly) NSArray<NSDictionary<NSString *, NSString *> *> *searchEngines;
 @property (nonatomic, readonly) NSArray<NSDictionary<NSString *, NSString *> *> *customSearchEngines;
